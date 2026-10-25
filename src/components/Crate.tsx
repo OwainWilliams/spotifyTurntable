@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { getPlaylists, getSavedAlbums, trackCount, type Album, type Playlist } from '../spotify/api'
 import { log } from '../lib/log'
 
@@ -15,13 +15,46 @@ interface Item {
   art: string | null
 }
 
+/** Lowercase and strip accents, so "beyonce" finds "Beyoncé". */
+const fold = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase()
+
 /**
  * The record crate: a slide-in list of your playlists and saved albums.
  * Loaded lazily the first time it opens, then cached for the session.
+ * The search box filters what's already loaded (name, artist), so it's
+ * instant and costs no API calls.
  */
 export function Crate({ open, onPlay, onClose }: Props) {
   const [items, setItems] = useState<Item[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
+
+  // Every word must appear somewhere in the name or subtitle, in any order.
+  // .NET analogy: a LINQ Where over an in-memory list, memoised so it only
+  // re-runs when the list or the query changes.
+  const shown = useMemo(() => {
+    const words = fold(query).split(/\s+/).filter(Boolean)
+    if (!items || !words.length) return items
+    return items.filter((i) => {
+      const text = fold(`${i.name} ${i.sub}`)
+      return words.every((w) => text.includes(w))
+    })
+  }, [items, query])
+
+  // Focus the search box on open. Deferred with setTimeout so the key that
+  // opened the crate ("C") doesn't get typed into it. On close, clear it and
+  // release focus: App ignores keys typed into inputs, so a focused hidden
+  // box would swallow every shortcut.
+  useEffect(() => {
+    if (!open) {
+      setQuery('')
+      searchRef.current?.blur()
+      return
+    }
+    const timer = setTimeout(() => searchRef.current?.focus(), 0)
+    return () => clearTimeout(timer)
+  }, [open])
 
   /**
    * Playlists and albums load independently (allSettled, not all), so if
@@ -67,15 +100,34 @@ export function Crate({ open, onPlay, onClose }: Props) {
         <span>Crate</span>
         <button onClick={onClose} aria-label="Close crate">×</button>
       </header>
+      <input
+        ref={searchRef}
+        className="crate-search"
+        type="search"
+        placeholder="Search playlists and albums"
+        aria-label="Search the crate"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        onKeyDown={(e) => {
+          // Enter plays the top match; Esc clears the search, then closes.
+          if (e.key === 'Enter' && shown?.[0]) onPlay(shown[0].uri)
+          if (e.key === 'Escape') {
+            e.preventDefault()
+            if (query) setQuery('')
+            else onClose()
+          }
+        }}
+      />
       {error && (
         <p className="muted">
           Could not load your library: {error} <button className="link" onClick={load}>Retry</button>
         </p>
       )}
       {!items && !error && <p className="muted">Loading…</p>}
-      {items && (
+      {shown && !shown.length && <p className="muted">Nothing matches “{query.trim()}”.</p>}
+      {shown && (
         <ul>
-          {items.map((i) => (
+          {shown.map((i) => (
             <li key={i.uri}>
               <button onClick={() => onPlay(i.uri)}>
                 {i.art ? <img src={i.art} alt="" /> : <span className="no-art" />}

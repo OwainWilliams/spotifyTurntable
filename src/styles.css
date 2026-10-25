@@ -284,6 +284,18 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .crate header button { background: none; border: 0; font-size: 1.5rem; line-height: 1; }
 .crate p { padding: 0 1.25rem; }
+.crate-search {
+  margin: 0 1.25rem 0.75rem;
+  padding: 0.6rem 0.9rem;
+  font: inherit;
+  color: var(--ink);
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 999px;
+  outline: 0;
+}
+.crate-search:focus { border-color: var(--steel); }
+.crate-search::placeholder { color: var(--ink-muted); }
 .crate ul { list-style: none; margin: 0; padding: 0 0.75rem 1rem; overflow-y: auto; }
 .crate li button {
   display: flex;
