@@ -190,6 +190,38 @@ button { font: inherit; color: inherit; cursor: pointer; }
   transform: rotate(-18deg);
 }
 
+/* ---- VU meter ------------------------------------------------------------ */
+/* Bottom-right of the plinth, clear of the platter and the tonearm's sweep.
+   Each segment's brightness comes from the channel's --level (set from JS)
+   and its own --i, so lighting is pure CSS: segment i is fully lit once
+   level * 12 passes i + 1, partly lit just below that. */
+.vu {
+  position: absolute;
+  right: 3.5vmin; bottom: 4vmin;
+  display: flex;
+  gap: 1vmin;
+  padding: 1vmin 1.2vmin 0.6vmin;
+  background: rgba(0,0,0,0.4);
+  border-radius: 0.8vmin;
+  box-shadow: inset 0 0.3vmin 0.8vmin rgba(0,0,0,0.6);
+}
+.vu-channel { display: flex; flex-direction: column; align-items: center; gap: 0.5vmin; }
+.vu-channel small { font-size: 1.2vmin; color: var(--ink-muted); }
+.vu-bars { --level: 0; display: flex; flex-direction: column-reverse; gap: 0.35vmin; }
+.vu-seg {
+  --seg: #5fd068;
+  width: 2.4vmin; height: 1.1vmin;
+  border-radius: 0.2vmin;
+  background: var(--seg);
+  box-shadow: 0 0 0.9vmin var(--seg);
+  opacity: clamp(0.12, calc(var(--level) * 12 - var(--i)), 1);
+}
+.vu-seg.amber { --seg: #f2b33d; }
+.vu-seg.red { --seg: #ef4b3f; }
+@media (prefers-reduced-motion: reduce) {
+  .vu { display: none; }
+}
+
 /* ---- text and controls --------------------------------------------------- */
 .now-playing {
   position: absolute;

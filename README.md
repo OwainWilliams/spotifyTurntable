@@ -23,7 +23,7 @@ A fullscreen virtual turntable for a spare screen. Album art spins as the record
 | L | Download the debug log |
 | Esc | Close the crate |
 
-Click the record to play/pause. Drag the tonearm to seek. The deck drifts by about 1% of the screen over ~20 minutes so nothing static burns into an OLED. Cursor and controls hide after 3 s idle.
+Click the record to play/pause. Drag the tonearm to seek. The VU meter on the plinth is for show: it pulses at a steady tempo picked per track rather than following the real audio, because Spotify's stream is DRM-protected and the page can't hear it. The deck drifts by about 1% of the screen over ~20 minutes so nothing static burns into an OLED. Cursor and controls hide after 3 s idle.
 
 ## Kiosk mode
 
@@ -44,7 +44,7 @@ src/
   player/useSpotifyPlayer.ts   Web Playback SDK wrapped as a React hook
   player/usePosition.ts  rAF clock so the tonearm moves between SDK events
   hooks/                 Fullscreen, wake lock, idle hide, album colour
-  components/            Turntable, NowPlaying, Crate
+  components/            Turntable, VuMeter, NowPlaying, Crate
   App.tsx                Wires it together; keyboard shortcuts live here
 ```
 

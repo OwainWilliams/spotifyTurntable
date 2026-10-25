@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent } from 'react'
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react'
 import type { Track } from '../player/useSpotifyPlayer'
 
 interface Props {
@@ -7,6 +7,8 @@ interface Props {
   positionMs: number
   onToggle: () => void
   onSeek: (ms: number) => void
+  /** Extra hardware mounted on the plinth (e.g. the VU meter). */
+  children?: ReactNode
 }
 
 /** Tonearm angles (degrees) for the start and end of a track. */
@@ -24,7 +26,7 @@ const RUN_OUT = 44
  * Drag the arm to seek. While dragging, the arm follows the pointer instead
  * of the playback position; on release we seek to wherever it was dropped.
  */
-export function Turntable({ track, paused, positionMs, onToggle, onSeek }: Props) {
+export function Turntable({ track, paused, positionMs, onToggle, onSeek, children }: Props) {
   const baseRef = useRef<HTMLDivElement>(null)
   /** Angle while the user is dragging; null otherwise. */
   const [dragAngle, setDragAngle] = useState<number | null>(null)
@@ -113,6 +115,8 @@ export function Turntable({ track, paused, positionMs, onToggle, onSeek }: Props
             <div className="headshell" />
           </div>
         </div>
+
+        {children}
       </div>
     </div>
   )

@@ -12,6 +12,7 @@ import { log } from './lib/log'
 import { Turntable } from './components/Turntable'
 import { NowPlaying } from './components/NowPlaying'
 import { Crate } from './components/Crate'
+import { VuMeter } from './components/VuMeter'
 
 /**
  * Three screens, one component:
@@ -149,7 +150,13 @@ export default function App() {
           log.info('app', 'seek', { ms })
           player.seek(ms)?.catch(report)
         }}
-      />
+      >
+        <VuMeter
+          trackKey={player.state.track ? `${player.state.track.name}|${player.state.track.artists}` : null}
+          playing={!!player.state.track && !player.state.paused}
+          volume={player.volume}
+        />
+      </Turntable>
 
       <NowPlaying track={player.state.track} />
 

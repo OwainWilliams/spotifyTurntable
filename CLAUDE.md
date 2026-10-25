@@ -21,7 +21,7 @@ src/spotify/api.ts             typed Web API calls with retry policy (401 refres
 src/player/useSpotifyPlayer.ts SDK lifecycle as a hook; returns status, deviceId, state, controls
 src/player/usePosition.ts      rAF clock extrapolating position between SDK events
 src/hooks/                     useFullscreen, useWakeLock, useIdle, useOnline, useAlbumColour
-src/components/                Turntable, NowPlaying, Crate, ErrorBoundary
+src/components/                Turntable, VuMeter, NowPlaying, Crate, ErrorBoundary
 src/App.tsx                    wiring, keyboard shortcuts, single report() for errors
 ```
 
@@ -30,6 +30,8 @@ src/App.tsx                    wiring, keyboard shortcuts, single report() for e
 - Chose React over Blazor: every interesting API (SDK, fullscreen, wake lock, DRM) is browser-native; Blazor would add an interop layer with no benefit.
 - Errors funnel to one `report()` in App.tsx. Don't catch deep in components.
 - A network failure during token refresh must NOT log the user out; only an `invalid_grant` does.
+- The VU meter is SIMULATED, by choice. SDK audio is DRM-protected (Web Audio can't read it) and `/audio-analysis` + `/audio-features` return 403 for apps created after Nov 2024. Each track gets a pseudo-tempo hashed from its name; the rAF loop writes `--level` straight to the DOM rather than React state. Mic/loopback input was offered as the real-beat alternative and declined for now.
+- Volume is persisted in localStorage (`turntable.volume`) and applied via the SDK, not the OS.
 - Burn-in drift is pure CSS on `.deck`: two `@property` lengths animated on 23 and 17 minute cycles, +/-1vmin. No JS, nothing to clean up. CSS time units are only `s`/`ms`; `23min` silently drops the whole `animation` declaration.
 - Disc rotation uses `animation-play-state` so it stops in place rather than snapping.
 - `transferPlayback` retries 404 because the SDK device takes a moment to register with Spotify.
