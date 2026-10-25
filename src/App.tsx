@@ -143,6 +143,10 @@ export default function App() {
         paused={player.state.paused}
         positionMs={position}
         onToggle={player.togglePlay}
+        onSeek={(ms) => {
+          log.info('app', 'seek', { ms })
+          player.seek(ms)?.catch(report)
+        }}
       />
 
       <NowPlaying track={player.state.track} />

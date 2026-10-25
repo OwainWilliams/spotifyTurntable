@@ -22,7 +22,7 @@ A fullscreen virtual turntable for a spare screen. Album art spins as the record
 | L | Download the debug log |
 | Esc | Close the crate |
 
-Click the record to play/pause. Cursor and controls hide after 3 s idle.
+Click the record to play/pause. Drag the tonearm to seek. Cursor and controls hide after 3 s idle.
 
 ## Kiosk mode
 

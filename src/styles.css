@@ -158,6 +158,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background: linear-gradient(90deg, var(--steel-dark), var(--steel), var(--steel-dark));
   border-radius: 1vmin;
 }
+/* Drag to seek. The arm is thin, so widen its hit area with an invisible strip. */
+.arm.draggable { cursor: grab; touch-action: none; }
+.arm.draggable::before { content: ''; position: absolute; inset: 0 -2vmin; }
+.arm.dragging { cursor: grabbing; transition: none; }
+.stage.idle .arm { cursor: none; }
 .headshell {
   position: absolute;
   bottom: -1vmin; left: 50%;

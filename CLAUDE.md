@@ -39,12 +39,12 @@ src/App.tsx                    wiring, keyboard shortcuts, single report() for e
 - Browsers require a user gesture before audio; that's what the "Power on" button is for.
 - SDK `position` only updates on state change; `usePosition` fills in between.
 - The SDK and API can both ask for a token in the same tick; refresh is coalesced to avoid spending the refresh token twice.
+- Tonearm drag-to-seek holds the dropped angle until `positionMs` catches up (or 3s), otherwise the arm swings back to the old position before the seek lands.
 - Album art is square; the circular label crop clips corners. Acceptable for now.
 
 ## Not yet built
 
 - Tauri wrapper (borderless fullscreen on a chosen monitor, auto-start). Do the kiosk-mode Chrome check first: `chrome --kiosk --app=http://127.0.0.1:5173`.
-- Drag the tonearm to seek.
 - Slow pixel drift to reduce OLED burn-in.
 - Non-Premium fallback (poll `/me/player/currently-playing`) is out of scope.
 
