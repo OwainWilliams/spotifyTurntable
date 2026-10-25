@@ -76,7 +76,7 @@ export default function App() {
     if (online) setNotice((n) => (n?.startsWith('Lost contact') ? null : n))
   }, [online])
 
-  // Keyboard: space play/pause, arrows skip, F fullscreen, C crate, L download log, Esc close.
+  // Keyboard: space play/pause, left/right skip, up/down volume, F fullscreen, C crate, L download log, Esc close.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return
@@ -84,6 +84,8 @@ export default function App() {
         case ' ': e.preventDefault(); player.togglePlay(); break
         case 'ArrowRight': player.next(); break
         case 'ArrowLeft': player.previous(); break
+        case 'ArrowUp': e.preventDefault(); player.setVolume(player.volume + 0.05); break
+        case 'ArrowDown': e.preventDefault(); player.setVolume(player.volume - 0.05); break
         case 'f': case 'F': toggleFullscreen(); break
         case 'c': case 'C': setCrateOpen((o) => !o); break
         case 'l': case 'L': log.download(); break
@@ -156,6 +158,15 @@ export default function App() {
         <button onClick={player.previous} aria-label="Previous">‹</button>
         <button onClick={player.togglePlay}>{player.state.paused ? 'Play' : 'Pause'}</button>
         <button onClick={player.next} aria-label="Next">›</button>
+        <label className="volume" title="Volume (↑ ↓)">
+          <span aria-hidden="true">Vol</span>
+          <input
+            type="range" min={0} max={1} step={0.01}
+            value={player.volume}
+            onChange={(e) => player.setVolume(Number(e.target.value))}
+            aria-label="Volume"
+          />
+        </label>
         <button onClick={toggleFullscreen}>{isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}</button>
         <button onClick={log.download} title="Download debug log (L)">Log</button>
       </nav>

@@ -58,11 +58,21 @@ function waitForSdk(timeoutMs = 15_000): Promise<void> {
   })
 }
 
+const VOLUME_KEY = 'turntable.volume'
+
+/** Last volume the user picked (0..1), so a reboot doesn't reset it. */
+function savedVolume(): number {
+  const raw = localStorage.getItem(VOLUME_KEY)
+  const v = raw === null ? NaN : Number(raw)
+  return v >= 0 && v <= 1 ? v : 0.8
+}
+
 export function useSpotifyPlayer(enabled: boolean) {
   const playerRef = useRef<Spotify.Player | null>(null)
   const [status, setStatus] = useState<PlayerStatus>('loading')
   const [deviceId, setDeviceId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [volume, setVolumeState] = useState(savedVolume)
   const [state, setState] = useState<PlayerState>({
     track: null,
     paused: true,
@@ -143,7 +153,7 @@ export function useSpotifyPlayer(enabled: boolean) {
             else fail('Cannot reach Spotify to refresh the session.', e)
           }
         },
-        volume: 0.8,
+        volume: savedVolume(),
       })
 
       player.addListener('ready', ({ device_id }) => {
@@ -220,5 +230,12 @@ export function useSpotifyPlayer(enabled: boolean) {
     next: () => playerRef.current?.nextTrack(),
     previous: () => playerRef.current?.previousTrack(),
     seek: (ms: number) => playerRef.current?.seek(ms),
+    volume,
+    setVolume: (v: number) => {
+      const clamped = Math.min(Math.max(v, 0), 1)
+      setVolumeState(clamped)
+      localStorage.setItem(VOLUME_KEY, String(clamped))
+      playerRef.current?.setVolume(clamped).catch((e) => log.warn('player', 'setVolume failed', e))
+    },
   }
 }

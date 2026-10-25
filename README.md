@@ -17,6 +17,7 @@ A fullscreen virtual turntable for a spare screen. Album art spins as the record
 |---|---|
 | Space | Play / pause |
 | ← → | Previous / next track |
+| ↑ ↓ | Volume up / down |
 | C | Open the crate |
 | F | Fullscreen |
 | L | Download the debug log |
