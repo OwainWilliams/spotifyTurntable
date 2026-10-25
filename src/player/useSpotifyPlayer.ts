@@ -74,10 +74,53 @@ export function useSpotifyPlayer(enabled: boolean) {
     if (!enabled) return
     let cancelled = false
 
+    // Reconnect state. If the device drops mid-session ('not_ready'), we
+    // disconnect and connect() again, backing off 1s, 2s, 4s ... capped at 30s.
+    // .NET analogy: a Polly WaitAndRetryForever policy around a SignalR
+    // HubConnection's StartAsync.
+    let attempt = 0
+    let reconnecting = false
+    let retryTimer = 0
+    let watchdog = 0
+    /** Set by errors that retrying cannot fix (auth, Premium, DRM). */
+    let stopped = false
+
     const fail = (msg: string, data?: unknown) => {
       log.error('player', msg, data)
       setError(msg)
       setStatus('error')
+    }
+    const fatal = (msg: string, data?: unknown) => {
+      stopped = true
+      clearTimeout(retryTimer)
+      clearTimeout(watchdog)
+      fail(msg, data)
+    }
+
+    const scheduleReconnect = (player: Spotify.Player) => {
+      if (cancelled || stopped || reconnecting || retryTimer) return
+      const delay = Math.min(1000 * 2 ** attempt, 30_000)
+      attempt++
+      log.info('player', `reconnecting in ${delay}ms (attempt ${attempt})`)
+      retryTimer = window.setTimeout(async () => {
+        retryTimer = 0
+        if (cancelled || stopped) return
+        reconnecting = true
+        // connect() can resolve true and then never fire 'ready' (e.g. the
+        // token refresh inside it failed), so give each attempt a deadline.
+        watchdog = window.setTimeout(() => {
+          log.warn('player', 'reconnect attempt timed out')
+          reconnecting = false
+          scheduleReconnect(player)
+        }, 20_000)
+        player.disconnect()
+        const ok = await player.connect()
+        if (!ok && reconnecting) {
+          clearTimeout(watchdog)
+          reconnecting = false
+          scheduleReconnect(player)
+        }
+      }, delay)
     }
 
     ;(async () => {
@@ -96,20 +139,31 @@ export function useSpotifyPlayer(enabled: boolean) {
             cb(await getAccessToken())
           } catch (e) {
             // Not calling cb leaves the SDK waiting; tell the UI instead.
-            fail(e instanceof AuthRequiredError ? e.message : 'Cannot reach Spotify to refresh the session.', e)
+            if (e instanceof AuthRequiredError) fatal(e.message, e)
+            else fail('Cannot reach Spotify to refresh the session.', e)
           }
         },
         volume: 0.8,
       })
 
       player.addListener('ready', ({ device_id }) => {
-        log.info('player', 'ready', { deviceId: device_id })
+        log.info('player', attempt ? 'ready (reconnected)' : 'ready', { deviceId: device_id })
+        // A slow attempt can succeed after the watchdog queued the next one.
+        clearTimeout(watchdog)
+        clearTimeout(retryTimer)
+        retryTimer = 0
+        attempt = 0
+        reconnecting = false
         setDeviceId(device_id)
         setStatus('ready')
+        setError(null)
       })
       player.addListener('not_ready', ({ device_id }) => {
+        // Our own disconnect() during a reconnect can also fire this; the
+        // guards in scheduleReconnect ignore it then.
         log.warn('player', 'device went offline', { deviceId: device_id })
         setStatus('loading')
+        scheduleReconnect(player)
       })
 
       player.addListener('player_state_changed', (s) => {
@@ -127,11 +181,11 @@ export function useSpotifyPlayer(enabled: boolean) {
       })
 
       player.addListener('initialization_error', ({ message }) =>
-        fail(`Browser cannot run the player (DRM missing?): ${message}`))
+        fatal(`Browser cannot run the player (DRM missing?): ${message}`))
       player.addListener('authentication_error', () =>
-        fail('Spotify rejected the login. Sign out and try again.'))
+        fatal('Spotify rejected the login. Sign out and try again.'))
       player.addListener('account_error', () =>
-        fail('Playback needs Spotify Premium.'))
+        fatal('Playback needs Spotify Premium.'))
       // Transient: a track that cannot be played here. Surface it but stay 'ready'.
       player.addListener('playback_error', ({ message }) => {
         log.warn('player', 'playback_error', { message })
@@ -148,6 +202,8 @@ export function useSpotifyPlayer(enabled: boolean) {
 
     return () => {
       cancelled = true
+      clearTimeout(retryTimer)
+      clearTimeout(watchdog)
       if (playerRef.current) log.info('player', 'disconnecting')
       playerRef.current?.disconnect()
       playerRef.current = null

@@ -32,6 +32,7 @@ src/App.tsx                    wiring, keyboard shortcuts, single report() for e
 - A network failure during token refresh must NOT log the user out; only an `invalid_grant` does.
 - Disc rotation uses `animation-play-state` so it stops in place rather than snapping.
 - `transferPlayback` retries 404 because the SDK device takes a moment to register with Spotify.
+- If the SDK device drops mid-session (`not_ready`), `useSpotifyPlayer` reconnects the same `Player` with backoff (1s doubling, capped at 30s, forever) and a 20s deadline per attempt. Auth, Premium and DRM errors stop retrying. A reconnect does not re-transfer playback; pick from the crate to resume.
 
 ## Known gotchas
 
@@ -43,7 +44,6 @@ src/App.tsx                    wiring, keyboard shortcuts, single report() for e
 ## Not yet built
 
 - Tauri wrapper (borderless fullscreen on a chosen monitor, auto-start). Do the kiosk-mode Chrome check first: `chrome --kiosk --app=http://127.0.0.1:5173`.
-- SDK reconnect with backoff if `not_ready` fires mid-session.
 - Drag the tonearm to seek.
 - Slow pixel drift to reduce OLED burn-in.
 - Non-Premium fallback (poll `/me/player/currently-playing`) is out of scope.

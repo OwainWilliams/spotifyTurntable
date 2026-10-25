@@ -58,7 +58,7 @@ src/
 
 - `spotify/auth.ts` throws two typed errors: `AuthRequiredError` (log in again) and `NetworkError` (Spotify unreachable). A network blip never logs you out; only a rejected refresh token does. Concurrent refreshes are coalesced so the SDK and API can't race each other.
 - `spotify/api.ts` retries 401 (refresh once), 429 (honours `Retry-After`) and 5xx (backoff), with a 10 s timeout per request. `transferPlayback` retries 404 because the device takes a moment to register.
-- `player/useSpotifyPlayer.ts` times out if the SDK script never loads, checks `connect()`'s result and listens for `playback_error`.
+- `player/useSpotifyPlayer.ts` times out if the SDK script never loads, checks `connect()`'s result and listens for `playback_error`. If the device drops mid-session it reconnects with backoff (1 s doubling to 30 s), stopping only on auth, Premium or DRM errors.
 - `App.tsx` has one `report()` function that maps thrown errors to UI: auth → back to login, network → "lost contact" banner, anything else → dismissible notice. Offline state shows its own banner.
 - `ErrorBoundary` catches render crashes and offers a reload.
 
