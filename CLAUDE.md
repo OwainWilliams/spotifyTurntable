@@ -1,0 +1,57 @@
+# Spotify Turntable
+
+Personal fullscreen visualiser for a dedicated PC screen: album art spins as the record label, tonearm tracks progress, playlists and saved albums in a slide-out crate. Audio plays in-browser via Spotify Web Playback SDK (Premium account available).
+
+Owner is a senior .NET developer learning React/TS. When explaining changes, prefer the .NET analogy where one exists, and explain *why* rather than just handing over code.
+
+## Stack and constraints
+
+- React 18 + Vite + TypeScript, strict mode, no state library, no CSS framework, no router. Keep it that way; the app is ~700 lines and should stay readable in one sitting.
+- Auth is PKCE, fully client-side, no backend. Redirect URI must be `http://127.0.0.1:5173/callback` (Spotify rejects `localhost`).
+- Client ID lives in `.env` as `VITE_SPOTIFY_CLIENT_ID` (gitignored). Never commit it.
+- Web Playback SDK is loaded via `<script>` in `index.html` and exposes `window.Spotify`; types from `@types/spotify-web-playback-sdk`.
+- Pin dependency versions. Spotify's API has removed endpoints with little notice, so treat it as the one external thing that can change underneath us.
+
+## Layout
+
+```
+src/lib/log.ts                 structured logger, ring buffer + localStorage, press L to download
+src/spotify/auth.ts            PKCE login, coalesced token refresh, AuthRequiredError / NetworkError
+src/spotify/api.ts             typed Web API calls with retry policy (401 refresh, 429 Retry-After, 5xx backoff)
+src/player/useSpotifyPlayer.ts SDK lifecycle as a hook; returns status, deviceId, state, controls
+src/player/usePosition.ts      rAF clock extrapolating position between SDK events
+src/hooks/                     useFullscreen, useWakeLock, useIdle, useOnline, useAlbumColour
+src/components/                Turntable, NowPlaying, Crate, ErrorBoundary
+src/App.tsx                    wiring, keyboard shortcuts, single report() for errors
+```
+
+## Decisions already made (don't relitigate without reason)
+
+- Chose React over Blazor: every interesting API (SDK, fullscreen, wake lock, DRM) is browser-native; Blazor would add an interop layer with no benefit.
+- Errors funnel to one `report()` in App.tsx. Don't catch deep in components.
+- A network failure during token refresh must NOT log the user out; only an `invalid_grant` does.
+- Disc rotation uses `animation-play-state` so it stops in place rather than snapping.
+- `transferPlayback` retries 404 because the SDK device takes a moment to register with Spotify.
+
+## Known gotchas
+
+- Browsers require a user gesture before audio; that's what the "Power on" button is for.
+- SDK `position` only updates on state change; `usePosition` fills in between.
+- The SDK and API can both ask for a token in the same tick; refresh is coalesced to avoid spending the refresh token twice.
+- Album art is square; the circular label crop clips corners. Acceptable for now.
+
+## Not yet built
+
+- Tauri wrapper (borderless fullscreen on a chosen monitor, auto-start). Do the kiosk-mode Chrome check first: `chrome --kiosk --app=http://127.0.0.1:5173`.
+- SDK reconnect with backoff if `not_ready` fires mid-session.
+- Drag the tonearm to seek.
+- Slow pixel drift to reduce OLED burn-in.
+- Non-Premium fallback (poll `/me/player/currently-playing`) is out of scope.
+
+## Commands
+
+```
+npm install
+npm run dev       # http://127.0.0.1:5173
+npm run build     # tsc -b && vite build
+```
