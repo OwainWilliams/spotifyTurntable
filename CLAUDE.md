@@ -21,7 +21,9 @@ src/spotify/api.ts             typed Web API calls with retry policy (401 refres
 src/player/useSpotifyPlayer.ts SDK lifecycle as a hook; returns status, deviceId, state, controls
 src/player/usePosition.ts      rAF clock extrapolating position between SDK events
 src/hooks/                     useFullscreen, useWakeLock, useIdle, useOnline, useAlbumColour
-src/components/                Turntable, VuMeter, NowPlaying, Crate, ErrorBoundary
+src/components/                Turntable, VuMeter, NowPlaying (track info + progress), Transport (buttons/volume), Crate, ErrorBoundary, icons (inline SVG)
+src/assets/walnut.svg          generated wood grain (SVG noise filters) for the plinth
+src/styles.css                 all styling; deck internals in cqw
 src/App.tsx                    wiring, keyboard shortcuts, single report() for errors
 ```
 
@@ -44,6 +46,14 @@ src/App.tsx                    wiring, keyboard shortcuts, single report() for e
 - The SDK and API can both ask for a token in the same tick; refresh is coalesced to avoid spending the refresh token twice.
 - Tonearm drag-to-seek holds the dropped angle until `positionMs` catches up (or 3s), otherwise the arm swings back to the old position before the seek lands.
 - Spotify's Feb 2026 Web API changes renamed playlist `tracks` to `items` (and `tracks.track` to `items.item` in playlist contents). `trackCount()` in api.ts reads either. Library lists can contain `null` entries; api.ts filters them. The crate loads playlists and albums with `Promise.allSettled` so one broken endpoint doesn't empty it.
+- The deck is drawn in cqw (container query units, `.deck` is the container): plinth 100 x 76, spindle (37, 38), record r 32.5, arm pivot (82, 14), arm 52.5. `LEAD_IN`/`RUN_OUT` in Turntable.tsx (27/47 deg) were solved for that geometry; change one, re-solve the other.
+- Only `.disc` rotates. Light reflections (`.sheen`) are a separate static layer above it, like a real lamp.
+- `radial-gradient(circle, ...)` sizes to the farthest corner, so percentages overshoot the visible circle by ~41%. Use `circle closest-side` for anything measured as % of a radius (masks, rings).
+- Groove rings finer than ~2px alias into moire; keep `repeating-radial-gradient` pitch >= 0.4cqw with soft edges.
+- `.stage` is `overflow: clip`, not `hidden`, and the crate focuses its search with `preventScroll`: hidden containers can still be scrolled by focus(), which slid the whole display sideways when the crate opened.
+- The App keyboard listener subscribes once and reads `player` through a ref. Re-subscribing per render dropped the first key after idle (React swapped the listener mid-dispatch).
+- Fonts are bundled (`@fontsource`, pinned) so kiosk mode renders correctly offline: Instrument Serif for titles, Inter for UI.
+- The Log button was removed from the UI; L still downloads the log, and the crash screen still offers it.
 - Album art is square; the circular label crop clips corners. Acceptable for now.
 
 ## Not yet built

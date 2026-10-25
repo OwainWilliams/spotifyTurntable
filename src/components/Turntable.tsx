@@ -11,20 +11,27 @@ interface Props {
   children?: ReactNode
 }
 
-/** Tonearm angles (degrees) for the start and end of a track. */
-const LEAD_IN = 22
-const RUN_OUT = 44
+/**
+ * Tonearm angles (degrees) where the stylus meets the outer groove and the
+ * run-out just outside the label. These depend on the geometry in
+ * styles.css (pivot, spindle and arm length, in cqw) and were solved for it;
+ * change one and re-solve the other.
+ */
+const LEAD_IN = 27
+const RUN_OUT = 47
 
 /**
- * The deck. Everything is sized in vmin so it scales to any screen.
- * The disc spins via a CSS animation; we only toggle animation-play-state,
- * so it slows to a stop in place rather than snapping.
+ * The deck, drawn as a top-down product shot. Sized in cqw (container query
+ * units: 1cqw = 1% of the deck's width), so it scales as one piece whatever
+ * size the layout gives it.
  *
- * Tonearm angle: rests at 0 when nothing plays, drops to the lead-in groove
- * at LEAD_IN, and sweeps to RUN_OUT at the run-out as the track plays.
+ * Only the record (grooves + label) rotates. The light reflections sit on a
+ * separate layer above it and stay still, as they would under a real lamp.
+ * Rotation uses animation-play-state so it stops in place rather than snapping.
  *
- * Drag the arm to seek. While dragging, the arm follows the pointer instead
- * of the playback position; on release we seek to wherever it was dropped.
+ * Tonearm: rests at 0deg beside the platter, drops to LEAD_IN when a track
+ * plays and sweeps to RUN_OUT by the end. Drag it to seek: while dragging
+ * the arm follows the pointer; on release we seek to wherever it was dropped.
  */
 export function Turntable({ track, paused, positionMs, onToggle, onSeek, children }: Props) {
   const baseRef = useRef<HTMLDivElement>(null)
@@ -88,7 +95,7 @@ export function Turntable({ track, paused, positionMs, onToggle, onSeek, childre
   return (
     <div className="deck">
       <div className="plinth">
-        <div className="slipmat">
+        <div className="platter">
           <button
             className={`disc ${spinning ? 'spinning' : ''}`}
             onClick={onToggle}
@@ -96,12 +103,15 @@ export function Turntable({ track, paused, positionMs, onToggle, onSeek, childre
           >
             <div className="grooves" />
             <div
-              className="label"
+              className={`label ${track?.artUrl ? '' : 'blank'}`}
               style={track?.artUrl ? { backgroundImage: `url(${track.artUrl})` } : undefined}
             />
-            <div className="spindle" />
           </button>
+          <div className="sheen" aria-hidden="true" />
+          <div className="spindle" aria-hidden="true" />
         </div>
+
+        <div className="arm-rest" aria-hidden="true" />
 
         <div className="arm-base" ref={baseRef}>
           <div
@@ -111,10 +121,27 @@ export function Turntable({ track, paused, positionMs, onToggle, onSeek, childre
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={() => setDragAngle(null)}
+            title={track ? 'Drag to seek' : undefined}
           >
-            <div className="headshell" />
+            <div className="counterweight" />
+            <div className="arm-tube" />
+            <div className="headshell">
+              <div className="finger-lift" />
+              <div className="cartridge" />
+            </div>
+            <div className="bearing" />
           </div>
         </div>
+
+        <button
+          className={`start-stop ${spinning ? 'on' : ''}`}
+          onClick={onToggle}
+          disabled={!track}
+          aria-label={paused ? 'Start' : 'Stop'}
+        >
+          <span className="led" aria-hidden="true" />
+          <span>Start · Stop</span>
+        </button>
 
         {children}
       </div>

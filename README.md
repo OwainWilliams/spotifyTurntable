@@ -23,7 +23,7 @@ A fullscreen virtual turntable for a spare screen. Album art spins as the record
 | L | Download the debug log |
 | Esc | Clear the crate search, then close the crate |
 
-Opening the crate focuses its search box: type to filter playlists and albums by name or artist (accents optional), Enter plays the top match. Click the record to play/pause. Drag the tonearm to seek. The VU meter on the plinth is for show: it pulses at a steady tempo picked per track rather than following the real audio, because Spotify's stream is DRM-protected and the page can't hear it. The deck drifts by about 1% of the screen over ~20 minutes so nothing static burns into an OLED. Cursor and controls hide after 3 s idle.
+Opening the crate focuses its search box: type to filter playlists and albums by name or artist (accents optional), Enter plays the top match. Click the record or the Start · Stop button to play/pause. Drag the tonearm, or click the progress bar, to seek. The VU meter on the plinth is for show: it pulses at a steady tempo picked per track rather than following the real audio, because Spotify's stream is DRM-protected and the page can't hear it. The deck drifts by about 1% of the screen over ~20 minutes so nothing static burns into an OLED. Cursor and controls hide after 3 s idle; the track details stay up.
 
 ## Kiosk mode
 
@@ -44,7 +44,8 @@ src/
   player/useSpotifyPlayer.ts   Web Playback SDK wrapped as a React hook
   player/usePosition.ts  rAF clock so the tonearm moves between SDK events
   hooks/                 Fullscreen, wake lock, idle hide, album colour
-  components/            Turntable, VuMeter, NowPlaying, Crate
+  components/            Turntable, VuMeter, NowPlaying, Transport, Crate, icons
+  assets/walnut.svg      Generated wood grain for the plinth
   App.tsx                Wires it together; keyboard shortcuts live here
 ```
 
@@ -67,7 +68,7 @@ src/
 
 `src/lib/log.ts` is a small structured logger. Every auth, API, player and UI failure writes a timestamped entry with a scope (`auth`, `api`, `player`, `app`, `render`, `window`). Entries go to the browser console with a `[turntable:scope]` prefix, and the last 500 are kept in localStorage across reloads.
 
-- Press **L** (or the Log button) to download the log as newline-delimited JSON.
+- Press **L** to download the log as newline-delimited JSON.
 - From devtools: `turntableLog.entries()`, `turntableLog.download()`, `turntableLog.clear()`.
 - Uncaught errors and unhandled promise rejections are captured automatically.
 - Nothing is sent anywhere; the log never contains tokens.

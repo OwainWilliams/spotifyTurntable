@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="912" viewBox="0 0 1200 912" preserveAspectRatio="none">
+  <!--
+    Walnut veneer for the plinth, generated rather than photographed:
+      grain  - noise stretched along x (low x frequency, high y) = long fibres
+      figure - very low frequency noise used to bend those fibres, so the
+               grain wanders like real wood instead of running in straight lines
+      tone   - broad light/dark patches in the timber
+    The colour matrices turn noise into brown tones with alpha, layered over
+    the plinth's base colour in CSS.
+  -->
+  <!-- Rendered past the edges and cropped by the viewBox: the displacement
+       pulls in transparent pixels near a filter region's border. -->
+  <filter id="grain" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.0022 0.085" numOctaves="4" seed="21" result="fibres"/>
+    <feTurbulence type="fractalNoise" baseFrequency="0.0035 0.006" numOctaves="2" seed="5" result="figure"/>
+    <feDisplacementMap in="fibres" in2="figure" scale="70" xChannelSelector="R" yChannelSelector="G" result="wavy"/>
+    <feColorMatrix in="wavy" values="0 0 0 0 0.10  0 0 0 0 0.055  0 0 0 0 0.025  0 0 0 -3.2 1.95"/>
+  </filter>
+  <filter id="tone" x="0" y="0" width="100%" height="100%">
+    <feTurbulence type="fractalNoise" baseFrequency="0.0016 0.006" numOctaves="2" seed="8"/>
+    <feColorMatrix values="0 0 0 0 0.45  0 0 0 0 0.27  0 0 0 0 0.14  0 0 0 -1.6 0.95"/>
+  </filter>
+  <rect x="-150" y="-150" width="1500" height="1212" filter="url(#tone)"/>
+  <rect x="-150" y="-150" width="1500" height="1212" filter="url(#grain)"/>
+</svg>

@@ -11,6 +11,7 @@ import { useOnline } from './hooks/useOnline'
 import { log } from './lib/log'
 import { Turntable } from './components/Turntable'
 import { NowPlaying } from './components/NowPlaying'
+import { Transport } from './components/Transport'
 import { Crate } from './components/Crate'
 import { VuMeter } from './components/VuMeter'
 
@@ -120,75 +121,92 @@ export default function App() {
 
   const connect = () => login().catch(report)
 
-  if (!loggedIn) {
-    return (
-      <main className="gate">
-        <h1>Turntable</h1>
-        {notice && <p className="muted">{notice}</p>}
-        <button className="primary" onClick={connect}>Connect Spotify</button>
-      </main>
-    )
+  const seek = (ms: number) => {
+    log.info('app', 'seek', { ms })
+    player.seek(ms)?.catch(report)
   }
+  const { track, upNext, paused } = player.state
 
-  if (!powered) {
+  if (!loggedIn || !powered) {
     return (
       <main className="gate">
-        <h1>Turntable</h1>
-        <button className="primary" onClick={() => setPowered(true)}>Power on</button>
-        <button className="link" onClick={() => { logout(); setLoggedIn(false) }}>Sign out</button>
+        <div className="gate-card">
+          <RecordMark />
+          <h1>Turntable</h1>
+          <p className="tagline">Your Spotify library, on a record player.</p>
+          {notice && <p className="gate-notice">{notice}</p>}
+          {!loggedIn ? (
+            <button className="primary" onClick={connect}>Connect Spotify</button>
+          ) : (
+            <>
+              <button className="primary" onClick={() => setPowered(true)}>Power on</button>
+              <button className="link" onClick={() => { logout(); setLoggedIn(false) }}>Sign out</button>
+            </>
+          )}
+        </div>
       </main>
     )
   }
 
   return (
     <main className={`stage ${idle ? 'idle' : ''}`} style={{ backgroundColor: bg }}>
-      {!online && <div className="banner">Offline. Playback will resume when the connection returns.</div>}
-      {online && player.status === 'loading' && <div className="banner muted">Connecting to Spotify…</div>}
-      {player.error && (
-        <div className="banner" onClick={player.clearError} role="status">{player.error}</div>
-      )}
-      {notice && (
-        <div className="banner" onClick={() => setNotice(null)} role="status">{notice}</div>
-      )}
+      {/* Blurred album art as room light. Keyed by URL so each new cover fades in. */}
+      {track?.artUrl && <div key={track.artUrl} className="backdrop" style={{ backgroundImage: `url(${track.artUrl})` }} />}
+      <div className="vignette" />
 
-      <Turntable
-        track={player.state.track}
-        paused={player.state.paused}
-        positionMs={position}
-        onToggle={player.togglePlay}
-        onSeek={(ms) => {
-          log.info('app', 'seek', { ms })
-          player.seek(ms)?.catch(report)
-        }}
-      >
-        <VuMeter
-          trackKey={player.state.track ? `${player.state.track.name}|${player.state.track.artists}` : null}
-          playing={!!player.state.track && !player.state.paused}
-          volume={player.volume}
-        />
-      </Turntable>
+      <div className="banners">
+        {!online && <div className="banner">Offline. Playback will resume when the connection returns.</div>}
+        {online && player.status === 'loading' && <div className="banner muted">Connecting to Spotify…</div>}
+        {player.error && (
+          <div className="banner" onClick={player.clearError} role="status">{player.error}</div>
+        )}
+        {notice && (
+          <div className="banner" onClick={() => setNotice(null)} role="status">{notice}</div>
+        )}
+      </div>
 
-      <NowPlaying track={player.state.track} />
-
-      <nav className="controls">
-        <button onClick={() => setCrateOpen(true)}>Crate</button>
-        <button onClick={player.previous} aria-label="Previous">‹</button>
-        <button onClick={player.togglePlay}>{player.state.paused ? 'Play' : 'Pause'}</button>
-        <button onClick={player.next} aria-label="Next">›</button>
-        <label className="volume" title="Volume (↑ ↓)">
-          <span aria-hidden="true">Vol</span>
-          <input
-            type="range" min={0} max={1} step={0.01}
-            value={player.volume}
-            onChange={(e) => player.setVolume(Number(e.target.value))}
-            aria-label="Volume"
+      <div className="scene">
+        <Turntable track={track} paused={paused} positionMs={position} onToggle={player.togglePlay} onSeek={seek}>
+          <VuMeter
+            trackKey={track ? `${track.name}|${track.artists}` : null}
+            playing={!!track && !paused}
+            volume={player.volume}
           />
-        </label>
-        <button onClick={toggleFullscreen}>{isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}</button>
-        <button onClick={log.download} title="Download debug log (L)">Log</button>
-      </nav>
+        </Turntable>
 
+        <aside className="info">
+          <NowPlaying track={track} upNext={upNext} paused={paused} positionMs={position} onSeek={seek} />
+          <Transport
+            paused={paused}
+            hasTrack={!!track}
+            volume={player.volume}
+            isFullscreen={isFullscreen}
+            onToggle={player.togglePlay}
+            onPrevious={player.previous}
+            onNext={player.next}
+            onVolume={player.setVolume}
+            onCrate={() => setCrateOpen(true)}
+            onFullscreen={toggleFullscreen}
+          />
+        </aside>
+      </div>
+
+      {/* Dims the deck behind the crate; clicking it closes the crate. */}
+      {crateOpen && <div className="scrim" onClick={() => setCrateOpen(false)} />}
       <Crate open={crateOpen} onPlay={play} onClose={() => setCrateOpen(false)} />
     </main>
+  )
+}
+
+/** Small record glyph for the start screens. */
+function RecordMark() {
+  return (
+    <svg className="record-mark" viewBox="0 0 64 64" aria-hidden="true">
+      <circle cx="32" cy="32" r="30" fill="#121012" />
+      <circle cx="32" cy="32" r="24" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.8" />
+      <circle cx="32" cy="32" r="19" fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth="0.8" />
+      <circle cx="32" cy="32" r="11" fill="var(--accent)" />
+      <circle cx="32" cy="32" r="1.8" fill="#121012" />
+    </svg>
   )
 }

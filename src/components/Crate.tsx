@@ -43,7 +43,9 @@ export function Crate({ open, onPlay, onClose }: Props) {
   }, [items, query])
 
   // Focus the search box on open. Deferred with setTimeout so the key that
-  // opened the crate ("C") doesn't get typed into it. On close, clear it and
+  // opened the crate ("C") doesn't get typed into it. preventScroll: the crate
+  // is still sliding in, so a plain focus() makes the browser scroll the stage
+  // sideways to reveal the box, shifting the whole screen. On close, clear it and
   // release focus: App ignores keys typed into inputs, so a focused hidden
   // box would swallow every shortcut.
   useEffect(() => {
@@ -52,7 +54,7 @@ export function Crate({ open, onPlay, onClose }: Props) {
       searchRef.current?.blur()
       return
     }
-    const timer = setTimeout(() => searchRef.current?.focus(), 0)
+    const timer = setTimeout(() => searchRef.current?.focus({ preventScroll: true }), 0)
     return () => clearTimeout(timer)
   }, [open])
 
@@ -75,14 +77,14 @@ export function Crate({ open, onPlay, onClose }: Props) {
           return {
             uri: p.uri,
             name: p.name,
-            sub: count === null ? 'Playlist' : `${count} tracks`,
+            sub: count === null ? 'Playlist' : `Playlist · ${count} tracks`,
             art: p.images?.[0]?.url ?? null,
           }
         }),
         ...(albums.status === 'fulfilled' ? albums.value : []).map((a: Album) => ({
           uri: a.uri,
           name: a.name,
-          sub: a.artists?.map((x) => x.name).join(', ') ?? '',
+          sub: ['Album', a.artists?.map((x) => x.name).join(', ')].filter(Boolean).join(' · '),
           art: a.images?.[0]?.url ?? null,
         })),
       ])

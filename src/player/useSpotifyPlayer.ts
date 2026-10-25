@@ -25,6 +25,8 @@ export interface Track {
 
 export interface PlayerState {
   track: Track | null
+  /** The next track in the queue, if Spotify told us. */
+  upNext: Track | null
   paused: boolean
   /** Position reported by the SDK at `reportedAt`. See usePosition. */
   positionMs: number
@@ -75,6 +77,7 @@ export function useSpotifyPlayer(enabled: boolean) {
   const [volume, setVolumeState] = useState(savedVolume)
   const [state, setState] = useState<PlayerState>({
     track: null,
+    upNext: null,
     paused: true,
     positionMs: 0,
     reportedAt: Date.now(),
@@ -184,6 +187,7 @@ export function useSpotifyPlayer(enabled: boolean) {
         })
         setState({
           track: toTrack(s.track_window.current_track),
+          upNext: s.track_window.next_tracks?.[0] ? toTrack(s.track_window.next_tracks[0]) : null,
           paused: s.paused,
           positionMs: s.position,
           reportedAt: Date.now(),
