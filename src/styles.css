@@ -68,7 +68,24 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .muted { color: var(--ink-muted); }
 
 /* ---- deck ---------------------------------------------------------------- */
-.deck { width: 92vmin; height: 92vmin; max-width: 100vw; }
+.deck {
+  width: 92vmin; height: 92vmin; max-width: 100vw;
+  /* Burn-in protection: wander +/-1vmin so the static edges (plinth, arm base)
+     never sit on the same pixels for hours. x and y run on different periods,
+     so the path traces a slow Lissajous curve rather than a line. At ~2vmin per
+     20 minutes the movement is far too slow to notice. */
+  translate: var(--drift-x) var(--drift-y);
+  animation:
+    drift-x 1380s ease-in-out infinite alternate, /* 23 min */
+    drift-y 1020s ease-in-out infinite alternate; /* 17 min */
+}
+
+/* Registered so the browser knows they are lengths and can interpolate them;
+   an unregistered custom property would jump between keyframes instead. */
+@property --drift-x { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@property --drift-y { syntax: '<length>'; inherits: false; initial-value: 0px; }
+@keyframes drift-x { from { --drift-x: -1vmin; } to { --drift-x: 1vmin; } }
+@keyframes drift-y { from { --drift-y: -1vmin; } to { --drift-y: 1vmin; } }
 
 .plinth {
   position: relative;

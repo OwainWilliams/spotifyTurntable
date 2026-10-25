@@ -30,6 +30,7 @@ src/App.tsx                    wiring, keyboard shortcuts, single report() for e
 - Chose React over Blazor: every interesting API (SDK, fullscreen, wake lock, DRM) is browser-native; Blazor would add an interop layer with no benefit.
 - Errors funnel to one `report()` in App.tsx. Don't catch deep in components.
 - A network failure during token refresh must NOT log the user out; only an `invalid_grant` does.
+- Burn-in drift is pure CSS on `.deck`: two `@property` lengths animated on 23 and 17 minute cycles, +/-1vmin. No JS, nothing to clean up. CSS time units are only `s`/`ms`; `23min` silently drops the whole `animation` declaration.
 - Disc rotation uses `animation-play-state` so it stops in place rather than snapping.
 - `transferPlayback` retries 404 because the SDK device takes a moment to register with Spotify.
 - If the SDK device drops mid-session (`not_ready`), `useSpotifyPlayer` reconnects the same `Player` with backoff (1s doubling, capped at 30s, forever) and a 20s deadline per attempt. Auth, Premium and DRM errors stop retrying. A reconnect does not re-transfer playback; pick from the crate to resume.
@@ -45,7 +46,6 @@ src/App.tsx                    wiring, keyboard shortcuts, single report() for e
 ## Not yet built
 
 - Tauri wrapper (borderless fullscreen on a chosen monitor, auto-start). Do the kiosk-mode Chrome check first: `chrome --kiosk --app=http://127.0.0.1:5173`.
-- Slow pixel drift to reduce OLED burn-in.
 - Non-Premium fallback (poll `/me/player/currently-playing`) is out of scope.
 
 ## Commands
