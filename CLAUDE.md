@@ -43,6 +43,7 @@ src/App.tsx                    wiring, keyboard shortcuts, single report() for e
 - SDK `position` only updates on state change; `usePosition` fills in between.
 - The SDK and API can both ask for a token in the same tick; refresh is coalesced to avoid spending the refresh token twice.
 - Tonearm drag-to-seek holds the dropped angle until `positionMs` catches up (or 3s), otherwise the arm swings back to the old position before the seek lands.
+- Spotify's Feb 2026 Web API changes renamed playlist `tracks` to `items` (and `tracks.track` to `items.item` in playlist contents). `trackCount()` in api.ts reads either. Library lists can contain `null` entries; api.ts filters them. The crate loads playlists and albums with `Promise.allSettled` so one broken endpoint doesn't empty it.
 - Album art is square; the circular label crop clips corners. Acceptable for now.
 
 ## Not yet built

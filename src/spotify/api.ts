@@ -19,16 +19,22 @@ export interface Playlist {
   name: string
   uri: string
   images: Image[] | null
-  tracks: { total: number }
-  owner: { display_name: string }
+  /** Track count. Spotify renamed `tracks` to `items` in Feb 2026; read via trackCount(). */
+  items?: { total: number } | null
+  /** Pre-Feb-2026 name for `items`. */
+  tracks?: { total: number } | null
+  owner: { display_name: string } | null
 }
+
+/** Track count under either the current or the pre-2026 field name. */
+export const trackCount = (p: Playlist): number | null => p.items?.total ?? p.tracks?.total ?? null
 
 export interface Album {
   id: string
   name: string
   uri: string
-  images: Image[]
-  artists: { name: string }[]
+  images: Image[] | null
+  artists: { name: string }[] | null
 }
 
 interface Page<T> {
@@ -114,11 +120,17 @@ async function all<T>(firstPath: string): Promise<T[]> {
 
 // ---- library ---------------------------------------------------------------
 
-export const getPlaylists = () => all<Playlist>('/me/playlists?limit=50')
+// Spotify can return null entries in these lists (e.g. a playlist that was
+// deleted or made private), so filter them out here rather than in every caller.
+
+export async function getPlaylists(): Promise<Playlist[]> {
+  const items = await all<Playlist | null>('/me/playlists?limit=50')
+  return items.filter((p): p is Playlist => p != null)
+}
 
 export async function getSavedAlbums(): Promise<Album[]> {
-  const items = await all<{ album: Album }>('/me/albums?limit=50')
-  return items.map((i) => i.album)
+  const items = await all<{ album: Album | null } | null>('/me/albums?limit=50')
+  return items.map((i) => i?.album).filter((a): a is Album => a != null)
 }
 
 // ---- playback --------------------------------------------------------------
