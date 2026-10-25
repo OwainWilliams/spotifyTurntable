@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AuthRequiredError, NetworkError, handleCallback, isLoggedIn, login, logout } from './spotify/auth'
 import { playContext, transferPlayback } from './spotify/api'
 import { useSpotifyPlayer } from './player/useSpotifyPlayer'
@@ -78,9 +78,19 @@ export default function App() {
   }, [online])
 
   // Keyboard: space play/pause, left/right skip, up/down volume, F fullscreen, C crate, L download log, Esc close.
+  //
+  // Subscribed once, reading the latest values through a ref. Re-subscribing
+  // whenever `player` changed (every render) lost keys: when a keypress itself
+  // triggers a render (e.g. useIdle waking the screen), React swaps the
+  // listener mid-dispatch, and the DOM skips both the removed old listener and
+  // the newly added one, so the first key after idle did nothing.
+  // .NET analogy: subscribe in the constructor, read current state from a field.
+  const keyDeps = useRef({ player, toggleFullscreen })
+  keyDeps.current = { player, toggleFullscreen }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return
+      const { player, toggleFullscreen } = keyDeps.current
       switch (e.key) {
         case ' ': e.preventDefault(); player.togglePlay(); break
         case 'ArrowRight': player.next(); break
@@ -95,7 +105,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [player, toggleFullscreen])
+  }, [])
 
   const play = async (uri: string) => {
     if (!player.deviceId) return setNotice('Player is still connecting')
