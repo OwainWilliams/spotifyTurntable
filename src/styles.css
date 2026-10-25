@@ -54,6 +54,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 .banner {
   position: absolute;
+  /* Above the deck: .plinth is positioned and comes later in the DOM, so
+     without this it paints over banners wherever they overlap. */
+  z-index: 2;
   top: 1.5rem;
   left: 50%;
   transform: translateX(-50%);
