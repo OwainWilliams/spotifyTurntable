@@ -1,0 +1,19 @@
+# Weekly PRs for outdated or vulnerable dependencies. Versions stay pinned;
+# Dependabot just proposes the next pin, and CI checks it.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Wait a week before proposing a brand-new release.
+    cooldown:
+      default-days: 7
+    groups:
+      # Tooling moves together (Vite + plugin, ESLint family, Vitest).
+      dev-tooling:
+        dependency-type: development
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

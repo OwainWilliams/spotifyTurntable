@@ -141,6 +141,9 @@ export async function getSavedAlbums(): Promise<Album[]> {
 
 // ---- playback --------------------------------------------------------------
 
+/** IDs come from Spotify, but escape them anyway so nothing can reshape a URL. */
+const enc = encodeURIComponent
+
 /**
  * Make our SDK player the active Spotify Connect device.
  * Spotify can 404 for a second or two after the SDK says 'ready' because the
@@ -171,7 +174,7 @@ export async function transferPlayback(deviceId: string, play = false): Promise<
  * Starting playback also empties the user's queue, which is how clearQueue works.
  */
 export const playContext = (deviceId: string, contextUri: string | null, trackUri?: string, positionMs?: number) =>
-  request<void>(`/me/player/play?device_id=${deviceId}`, {
+  request<void>(`/me/player/play?device_id=${enc(deviceId)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -184,7 +187,7 @@ export const playContext = (deviceId: string, contextUri: string | null, trackUr
 
 /** Add a track to the end of Spotify's queue (it can't be removed again via the API). */
 export const addToQueue = (deviceId: string, trackUri: string) =>
-  request<void>(`/me/player/queue?uri=${encodeURIComponent(trackUri)}&device_id=${deviceId}`, { method: 'POST' })
+  request<void>(`/me/player/queue?uri=${enc(trackUri)}&device_id=${enc(deviceId)}`, { method: 'POST' })
 
 // ---- context contents (jukebox title strips) -------------------------------
 
@@ -239,10 +242,10 @@ export async function getContextTracks(contextUri: string): Promise<ContextTrack
   const [, kind, id] = contextUri.split(':')
   let tracks: (ApiTrack | null | undefined)[]
   if (kind === 'album') {
-    tracks = await upTo<ApiTrack>(`/albums/${id}/tracks?limit=50`, MAX_CONTEXT_TRACKS)
+    tracks = await upTo<ApiTrack>(`/albums/${enc(id)}/tracks?limit=50`, MAX_CONTEXT_TRACKS)
   } else if (kind === 'playlist') {
     const rows = await upTo<{ item?: ApiTrack | null; track?: ApiTrack | null } | null>(
-      `/playlists/${id}/items?limit=50`, MAX_CONTEXT_TRACKS)
+      `/playlists/${enc(id)}/items?limit=50`, MAX_CONTEXT_TRACKS)
     tracks = rows.map((r) => r?.item ?? r?.track)
   } else if (contextUri.endsWith(':collection')) {
     const rows = await upTo<{ track: ApiTrack | null } | null>('/me/tracks?limit=50', MAX_CONTEXT_TRACKS)
@@ -259,9 +262,9 @@ export async function getContextTracks(contextUri: string): Promise<ContextTrack
  */
 export async function getContextName(contextUri: string): Promise<string | null> {
   const [, kind, id] = contextUri.split(':')
-  if (kind === 'playlist') return (await request<{ name: string }>(`/playlists/${id}?fields=name`)).name
-  if (kind === 'album') return (await request<{ name: string }>(`/albums/${id}`)).name
-  if (kind === 'artist') return (await request<{ name: string }>(`/artists/${id}`)).name
+  if (kind === 'playlist') return (await request<{ name: string }>(`/playlists/${enc(id)}?fields=name`)).name
+  if (kind === 'album') return (await request<{ name: string }>(`/albums/${enc(id)}`)).name
+  if (kind === 'artist') return (await request<{ name: string }>(`/artists/${enc(id)}`)).name
   if (contextUri.endsWith(':collection')) return 'Liked Songs'
   return null
 }

@@ -102,7 +102,15 @@ async function sha256Base64Url(input: string): Promise<string> {
 
 function loadTokens(): StoredTokens | null {
   const raw = localStorage.getItem(STORAGE_KEY)
-  return raw ? (JSON.parse(raw) as StoredTokens) : null
+  if (!raw) return null
+  try {
+    const t = JSON.parse(raw) as StoredTokens
+    if (typeof t?.accessToken === 'string' && typeof t.refreshToken === 'string') return t
+  } catch { /* fall through */ }
+  // Corrupt or from an older shape: treat as logged out rather than crash at start-up.
+  log.warn('auth', 'stored tokens unreadable, discarding')
+  localStorage.removeItem(STORAGE_KEY)
+  return null
 }
 
 function saveTokens(t: StoredTokens) {
