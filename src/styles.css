@@ -145,11 +145,14 @@ button:disabled { cursor: default; }
   align-items: center;
   justify-content: center;
   padding: 4vh 4vw;
+}
 
-  /* Burn-in protection: wander +/-1vmin so nothing static (plinth edges,
-     text) sits on the same pixels for hours. x and y run on different
-     periods, so the path traces a slow Lissajous curve rather than a line.
-     At ~2vmin per 20 minutes the movement is far too slow to notice. */
+/* Burn-in protection, on whichever machine is showing: wander +/-1vmin so
+   nothing static (plinth edges, marquee, text) sits on the same pixels for
+   hours. x and y run on different periods, so the path traces a slow
+   Lissajous curve rather than a line. At ~2vmin per 20 minutes the movement
+   is far too slow to notice. */
+.drift {
   translate: var(--drift-x) var(--drift-y);
   animation:
     drift-x 1380s ease-in-out infinite alternate, /* 23 min */
@@ -699,8 +702,413 @@ button:disabled { cursor: default; }
 }
 .crate small { display: block; margin-top: 0.2rem; font-size: 0.82rem; color: var(--ink-3); }
 
+/* ---- jukebox ------------------------------------------------------------- */
+/*
+ * The second theme: a title-strip wall-box. Like the deck it is drawn in cqw
+ * (.jukebox is the container), at a fixed 16:9 so it scales as one piece.
+ * 1cqw is roughly 15px on a 1080p screen.
+ */
+.jukebox-scene { height: 100%; display: grid; place-items: center; }
+
+/* The lights take their colour from the album art (set inline from
+   useAlbumColour). Registered as a <color> so it can fade between records;
+   an unregistered custom property would jump. */
+@property --neon { syntax: '<color>'; inherits: true; initial-value: #ff4f8b; }
+
+.jukebox {
+  --neon: #ff4f8b;
+  transition: --neon 1.5s ease;
+  --paper: #fbf6ea;
+  --paper-2: #d9cfbb;
+  --type: #2a1d14;
+  --typewriter: 'Courier Prime', 'Courier New', monospace;
+  container-type: inline-size;
+  width: min(96vw, calc(94vh * 16 / 9));
+  aspect-ratio: 16 / 9;
+}
+.cabinet {
+  height: 100%;
+  box-sizing: border-box;
+  padding: 1.6cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 1.3cqw;
+  border-radius: 2.9cqw;
+  background:
+    linear-gradient(155deg, rgba(255, 232, 205, 0.12), transparent 40%, rgba(0, 0, 0, 0.35)),
+    url('./assets/walnut.svg') 0 0 / 100% 100%,
+    #4a2f1e;
+  box-shadow:
+    inset 0 0 0 0.27cqw var(--alu-2),
+    inset 0 0 0 0.45cqw rgba(0, 0, 0, 0.4),
+    0 2cqw 4.5cqw rgba(0, 0, 0, 0.6);
+}
+
+/* Chrome-framed dark glass, shared by the marquee, dome and strip rack. */
+.marquee, .dome, .strips {
+  box-shadow:
+    inset 0 0 0 0.3cqw var(--alu-1),
+    inset 0 0 0 0.45cqw rgba(0, 0, 0, 0.5),
+    inset 0 0.9cqw 2cqw rgba(0, 0, 0, 0.65);
+}
+
+.marquee {
+  flex: none;
+  height: 6cqw;
+  display: flex;
+  align-items: center;
+  padding: 0 2.4cqw;
+  border-radius: 1.6cqw;
+  background: radial-gradient(ellipse 50% 120% at 50% 50%, #2a1712, #0d0908);
+}
+.marquee small {
+  flex: 1;
+  min-width: 0;
+  font: 700 0.85cqw var(--typewriter);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(251, 246, 234, 0.75);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.marquee small:last-child { text-align: right; }
+.neon-sign {
+  padding: 0 2cqw;
+  font: 3.8cqw/1 'Monoton', var(--serif);
+  letter-spacing: 0.06em;
+  color: #fff1f6;
+  text-shadow: 0 0 0.4cqw var(--neon), 0 0 1.2cqw var(--neon), 0 0 2.8cqw var(--neon);
+  animation: flicker 7s linear infinite;
+}
+/* A brief dip every few seconds, like an old tube. */
+@keyframes flicker { 0%, 47%, 50%, 100% { opacity: 1; } 48% { opacity: 0.82; } }
+
+.jukebox-main { flex: 1; min-height: 0; display: flex; gap: 1.6cqw; }
+
+/* ---- jukebox: dome ---- */
+.dome {
+  position: relative;
+  width: 28cqw;
+  flex: none;
+  box-sizing: border-box;
+  padding: 1.3cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 1cqw;
+  overflow: hidden;
+  border-radius: 14cqw 14cqw 1.2cqw 1.2cqw;
+  background: radial-gradient(ellipse 80% 60% at 50% 40%, #2e2018, #0d0908 75%);
+}
+/* Glass reflection over everything in the dome. */
+.dome::after {
+  content: '';
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.09), transparent 34%);
+  pointer-events: none;
+}
+.dome-record { flex: 1; min-height: 0; display: grid; place-items: center; }
+.single-wrap { position: relative; height: min(18cqw, 100%); aspect-ratio: 1; }
+/* During a change both records share the one grid cell. */
+.dome-record > .single-wrap { grid-area: 1 / 1; }
+
+/* Changing records: the old one lifts out through the top of the dome
+   (which clips it), then the new one comes down, overshoots a touch as it
+   settles on the spindle, and only then starts to turn. */
+.single-wrap.leaving { animation: put-away 0.55s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
+.single-wrap.arriving { animation: fetch-record 0.75s 0.45s var(--ease) backwards; }
+.single-wrap.arriving .single { animation-play-state: paused; }
+@keyframes put-away {
+  30% { transform: translateY(-4%) scale(1.04); }  /* lifted off the spindle */
+  to { transform: translateY(-140%) scale(0.92); }
+}
+@keyframes fetch-record {
+  from { transform: translateY(-140%) scale(0.92); }
+  75% { transform: translateY(2%) scale(1.03); }
+  to { transform: none; }
+}
+.single, .single-sheen { position: absolute; inset: 0; border-radius: 50%; }
+
+/* The 45. Only this rotates; 1.333s per turn is 45rpm. */
+.single {
+  background: repeating-radial-gradient(circle closest-side, #0c0b0d 0, #1c1a1e 0.15cqw, #0c0b0d 0.3cqw);
+  box-shadow: 0 0.8cqw 1.7cqw rgba(0, 0, 0, 0.75);
+  animation: spin 1.333s linear infinite;
+  animation-play-state: paused;
+  will-change: transform;
+}
+.single.spinning { animation-play-state: running; }
+.single-label {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 42%; height: 42%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: center / cover no-repeat;
+  box-shadow: 0 0 0 0.2cqw rgba(0, 0, 0, 0.5);
+}
+.single-label.blank { background: radial-gradient(circle closest-side, #e9dfcc 0 30%, #ddd0b8 31% 100%); }
+/* A 45's big centre hole, filled by a chrome spindle adapter. */
+.single-label::after {
+  content: '';
+  position: absolute;
+  inset: 34%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #f2f3f5, #9a9da3 70%);
+  box-shadow: 0 0.06cqw 0.2cqw rgba(0, 0, 0, 0.6);
+}
+.single-sheen {
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background: conic-gradient(from 300deg, transparent 0deg, rgba(255, 255, 255, 0.14) 16deg, transparent 38deg,
+    transparent 180deg, rgba(255, 255, 255, 0.08) 196deg, transparent 222deg);
+}
+
+.readout {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6cqw;
+  padding: 0.9cqw 1cqw;
+  border-radius: 0.5cqw;
+  background: var(--paper);
+  color: var(--type);
+  box-shadow: 0 0 0 0.2cqw var(--neon), 0 0 1.6cqw var(--neon);
+}
+.readout-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1cqw;
+  font: 700 0.78cqw var(--typewriter);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.readout h1 {
+  margin: 0 0 0.3cqw;
+  font: 400 2.2cqw/1 var(--serif);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.readout p { margin: 0; font-size: 0.95cqw; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rail-45 {
+  position: relative;
+  height: 0.4cqw;
+  border-radius: 0.2cqw;
+  background: var(--paper-2);
+  box-shadow: inset 0 0.06cqw 0.12cqw rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+.rail-45::before { content: ''; position: absolute; inset: -0.6cqw 0; }
+.rail-45 .fill { background: var(--type); }
+
+/* ---- jukebox: title strips ---- */
+.strips {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 1.15cqw;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(6, minmax(0, 1fr));
+  grid-auto-flow: column;           /* A1-A6 down the first column, as on a real wall-box */
+  gap: 0.65cqw 0.9cqw;
+  border-radius: 1.15cqw;
+  background: linear-gradient(180deg, #1a120d, #0f0a07);
+}
+.strip {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0.25cqw;
+  overflow: hidden;
+  background: var(--paper);
+  color: var(--type);
+  text-align: left;
+  box-shadow: 0 0.12cqw 0.25cqw rgba(0, 0, 0, 0.45), inset 0 0 0 0.06cqw rgba(0, 0, 0, 0.2);
+  transition: box-shadow 0.3s, transform 0.15s var(--ease);
+}
+button.strip:hover { transform: translateY(-0.1cqw); }
+.strip.playing { box-shadow: 0 0 0 0.2cqw var(--neon), 0 0 1.4cqw var(--neon); }
+.strip.empty { opacity: 0.3; }
+.strip .code {
+  display: grid;
+  place-items: center;
+  width: 3cqw;
+  flex: none;
+  background: var(--type);
+  color: var(--paper);
+  font: 700 0.95cqw var(--typewriter);
+}
+.strip .text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+/* Title: centred in the space above the band, wrapping to two lines before
+   it truncates. The inner span does the clamping (line-clamp needs
+   display: -webkit-box, which can't also centre itself vertically). */
+.strip strong {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 0.75cqw;
+  font: 700 0.9cqw/1.15 var(--typewriter);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.strip strong span {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.strip .band {
+  padding: 0.2cqw 0.75cqw;
+  font: 500 0.75cqw var(--sans);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Queue position, pinned to the strip's top-right corner. */
+.queued-badge {
+  position: absolute;
+  top: 0.35cqw; right: 0.35cqw;
+  min-width: 1.4cqw; height: 1.4cqw;
+  padding: 0 0.35cqw;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--type);
+  color: var(--paper);
+  font: 700 0.75cqw var(--typewriter);
+  box-shadow: 0 0 0 0.12cqw var(--neon), 0 0 0.7cqw var(--neon);
+}
+
+/* Coloured artist bands, cycling like a printed set of strips. */
+.band-0 { background: #f4a6b8; }
+.band-1 { background: #9cc7e8; }
+.band-2 { background: #f6d36b; }
+.band-3 { background: #a8d8a0; }
+
+/* ---- jukebox: control bar ---- */
+.jukebox-bar {
+  flex: none;
+  height: 6cqw;
+  box-sizing: border-box;
+  padding: 0 1.75cqw;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5cqw;
+  border-radius: 1.25cqw;
+  background: linear-gradient(180deg, #f2f3f5, #c3c5ca 45%, #8d9096);
+  box-shadow:
+    inset 0 0.12cqw 0 #fff,
+    inset 0 -0.2cqw 0 rgba(0, 0, 0, 0.25),
+    0 0.4cqw 0.9cqw rgba(0, 0, 0, 0.4);
+  color: var(--type);
+}
+.bar-group { display: flex; align-items: center; gap: 0.5cqw; }
+.bar-divider { width: 0.12cqw; height: 2.2cqw; margin: 0 0.4cqw; background: rgba(0, 0, 0, 0.25); }
+.jukebox-bar svg { width: 1.3cqw; height: 1.3cqw; }
+
+/* Cream push buttons: the selector keys, page keys and fullscreen. */
+.key, .piano {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: linear-gradient(180deg, var(--paper), var(--paper-2));
+  color: var(--type);
+  transition: transform 0.1s, box-shadow 0.2s;
+}
+.key {
+  width: 2.75cqw; height: 2.75cqw;
+  border-radius: 50%;
+  font: 700 1cqw var(--typewriter);
+  box-shadow: inset 0 -0.2cqw 0 rgba(0, 0, 0, 0.2), 0 0.2cqw 0.3cqw rgba(0, 0, 0, 0.45);
+}
+.key[aria-pressed='true'] {
+  background: var(--type);
+  color: var(--paper);
+  box-shadow: 0 0 0 0.2cqw var(--neon), inset 0 0.12cqw 0.2cqw rgba(0, 0, 0, 0.5);
+}
+/* Transport: chunky piano keys. */
+.piano {
+  width: 4.5cqw; height: 3.5cqw;
+  border-radius: 0.5cqw 0.5cqw 0.75cqw 0.75cqw;
+  box-shadow: inset 0 -0.25cqw 0 rgba(0, 0, 0, 0.2), 0 0.2cqw 0.4cqw rgba(0, 0, 0, 0.45);
+}
+.piano.wide { width: 5.25cqw; }
+.piano.lit { box-shadow: inset 0 -0.25cqw 0 rgba(0, 0, 0, 0.2), 0 0 0 0.2cqw var(--neon), 0 0 1.1cqw var(--neon); }
+.key:active:not(:disabled), .piano:active:not(:disabled) { transform: translateY(0.12cqw); }
+.key:disabled, .piano:disabled { opacity: 0.4; }
+
+.bar-label {
+  display: flex;
+  align-items: center;
+  gap: 0.6cqw;
+  margin-right: 0.6cqw;
+  font: 700 0.75cqw var(--typewriter);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.bar-label input { width: 9cqw; accent-color: var(--type); cursor: pointer; }
+.pill-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5cqw;
+  height: 2.75cqw;
+  padding: 0 1.1cqw;
+  border: 0;
+  border-radius: 999px;
+  background: var(--type);
+  color: var(--paper);
+  font: 700 0.8cqw var(--typewriter);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  box-shadow: 0 0.2cqw 0.4cqw rgba(0, 0, 0, 0.45);
+}
+.pill-key:hover { background: #3d2a1e; }
+.pill-key:disabled { opacity: 0.45; cursor: default; background: var(--type); }
+/* Queue mode switch: an LED that lights in the neon colour when on. */
+.pill-key.mode .led {
+  width: 0.55cqw; height: 0.55cqw;
+  border-radius: 50%;
+  background: #5a3a24;
+  box-shadow: inset 0 0.06cqw 0.1cqw rgba(0, 0, 0, 0.5);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.pill-key.mode.on .led { background: var(--neon); box-shadow: 0 0 0.5cqw var(--neon), 0 0 1cqw var(--neon); }
+
+/* ---- jukebox: attract mode ---- */
+/* Paused with nobody about (see useAttract): the controls dim, a light runs
+   down the strips one by one, and the sign breathes. After a long while,
+   "asleep": everything dims and stops. */
+.dome, .jukebox-bar, .cabinet { transition: filter 2s ease; }
+.jukebox.attract .dome, .jukebox.attract .jukebox-bar { filter: brightness(0.55); }
+.jukebox.attract .neon-sign { animation: neon-breathe 4s ease-in-out infinite; }
+.jukebox.attract .strip { animation: chase 9s linear infinite; animation-delay: calc(var(--i) * 0.5s); }
+/* 18 strips x 0.5s = 9s, so the light comes round again just as it ends. */
+@keyframes chase {
+  0%, 9%, 100% { box-shadow: 0 0.12cqw 0.25cqw rgba(0, 0, 0, 0.45), inset 0 0 0 0.06cqw rgba(0, 0, 0, 0.2); }
+  3% { box-shadow: 0 0 0 0.2cqw var(--neon), 0 0 1.4cqw var(--neon); }
+}
+@keyframes neon-breathe { 50% { opacity: 0.55; } }
+.jukebox.asleep .cabinet { filter: brightness(0.3); }
+.jukebox.asleep .neon-sign { animation: none; }
+
 /* ---- motion preferences -------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
-  .disc, .record-mark, .eyebrow .dot { animation: none; }
+  .disc, .single, .single-wrap, .neon-sign, .record-mark, .eyebrow .dot,
+  .jukebox.attract .neon-sign, .jukebox.attract .strip { animation: none; }
+  .jukebox { transition: none; }
   .vu { display: none; }
 }

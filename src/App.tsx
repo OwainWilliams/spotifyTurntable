@@ -1,30 +1,39 @@
 import { useEffect, useRef, useState } from 'react'
 import { AuthRequiredError, NetworkError, handleCallback, isLoggedIn, login, logout } from './spotify/auth'
-import { playContext, transferPlayback } from './spotify/api'
+import { addToQueue, playContext, transferPlayback } from './spotify/api'
 import { useSpotifyPlayer } from './player/useSpotifyPlayer'
 import { usePosition } from './player/usePosition'
+import { useContextTracks } from './player/useContextTracks'
 import { useFullscreen } from './hooks/useFullscreen'
 import { useWakeLock } from './hooks/useWakeLock'
 import { useIdle } from './hooks/useIdle'
 import { useAlbumColour } from './hooks/useAlbumColour'
 import { useOnline } from './hooks/useOnline'
+import { useTheme } from './hooks/useTheme'
+import { useAttract } from './hooks/useAttract'
 import { log } from './lib/log'
 import { Turntable } from './components/Turntable'
 import { NowPlaying } from './components/NowPlaying'
 import { Transport } from './components/Transport'
 import { Crate } from './components/Crate'
 import { VuMeter } from './components/VuMeter'
+import { Jukebox, PER_PAGE } from './components/Jukebox'
 
 /**
  * Three screens, one component:
  *   1. not logged in      -> "Connect Spotify"
  *   2. logged in, no deck -> "Power on" (needed: browsers require a click before audio)
- *   3. deck running       -> turntable + crate
+ *   3. deck running       -> turntable or jukebox (the theme) + crate
  */
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(isLoggedIn())
   const [powered, setPowered] = useState(false)
   const [crateOpen, setCrateOpen] = useState(false)
+  const [theme, toggleTheme] = useTheme()
+  /** Jukebox strip page. Lives here so Page Up/Down can turn it. */
+  const [page, setPage] = useState(0)
+  /** Bumped after adding to the queue, so queue-sourced strips refetch. */
+  const [queueVersion, setQueueVersion] = useState(0)
   /** One slot for the most recent problem the user should see. */
   const [notice, setNotice] = useState<string | null>(null)
   const online = useOnline()
@@ -33,9 +42,22 @@ export default function App() {
   const position = usePosition(player.state)
   const { isFullscreen, toggle: toggleFullscreen } = useFullscreen()
   const idle = useIdle(3000)
-  const bg = useAlbumColour(player.state.track?.artUrl ?? null)
+  const { background: bg, neon } = useAlbumColour(player.state.track?.artUrl ?? null)
+  const attract = useAttract(powered && theme === 'jukebox' && (player.state.paused || !player.state.track))
 
-  useWakeLock(powered && !player.state.paused)
+  // Awake while playing, and through attract mode (that's the point of it);
+  // once attract mode gives up, the screen may sleep.
+  useWakeLock(powered && (!player.state.paused || attract === 'attract'))
+
+  // Only fetched while the jukebox is on screen; the turntable doesn't need it.
+  const strips = useContextTracks(
+    player.state.contextUri,
+    player.state.track?.uri ?? null,
+    powered && theme === 'jukebox',
+    queueVersion,
+  )
+  const pages = Math.max(1, Math.ceil(strips.tracks.length / PER_PAGE))
+  const shownPage = Math.min(page, pages - 1)
 
   /**
    * Central place to turn a thrown error into something on screen.
@@ -73,12 +95,17 @@ export default function App() {
     log.info('app', online ? 'online' : 'offline')
   }, [online])
 
+  useEffect(() => {
+    if (strips.error) report(strips.error)
+  }, [strips.error])
+
   // Clear a stale network notice when the connection comes back.
   useEffect(() => {
     if (online) setNotice((n) => (n?.startsWith('Lost contact') ? null : n))
   }, [online])
 
-  // Keyboard: space play/pause, left/right skip, up/down volume, F fullscreen, C crate, L download log, Esc close.
+  // Keyboard: space play/pause, left/right skip, up/down volume, F fullscreen, C crate,
+  // T theme, Page Up/Down jukebox page, L download log, Esc close.
   //
   // Subscribed once, reading the latest values through a ref. Re-subscribing
   // whenever `player` changed (every render) lost keys: when a keypress itself
@@ -86,12 +113,12 @@ export default function App() {
   // listener mid-dispatch, and the DOM skips both the removed old listener and
   // the newly added one, so the first key after idle did nothing.
   // .NET analogy: subscribe in the constructor, read current state from a field.
-  const keyDeps = useRef({ player, toggleFullscreen })
-  keyDeps.current = { player, toggleFullscreen }
+  const keyDeps = useRef({ player, toggleFullscreen, toggleTheme, pages })
+  keyDeps.current = { player, toggleFullscreen, toggleTheme, pages }
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return
-      const { player, toggleFullscreen } = keyDeps.current
+      const { player, toggleFullscreen, toggleTheme, pages } = keyDeps.current
       switch (e.key) {
         case ' ': e.preventDefault(); player.togglePlay(); break
         case 'ArrowRight': player.next(); break
@@ -100,6 +127,9 @@ export default function App() {
         case 'ArrowDown': e.preventDefault(); player.setVolume(player.volume - 0.05); break
         case 'f': case 'F': toggleFullscreen(); break
         case 'c': case 'C': setCrateOpen((o) => !o); break
+        case 't': case 'T': toggleTheme(); break
+        case 'PageDown': e.preventDefault(); setPage((p) => Math.min(p + 1, pages - 1)); break
+        case 'PageUp': e.preventDefault(); setPage((p) => Math.max(p - 1, 0)); break
         case 'l': case 'L': log.download(); break
         case 'Escape': setCrateOpen(false); break
       }
@@ -119,13 +149,66 @@ export default function App() {
     }
   }
 
+  /** Play one track from the strips, carrying on through its album or playlist. */
+  const playTrack = async (uri: string) => {
+    if (!player.deviceId) return setNotice('Player is still connecting')
+    log.info('app', 'play track', { uri, context: player.state.contextUri })
+    try {
+      await playContext(player.deviceId, player.state.contextUri, uri)
+    } catch (e) {
+      report(e)
+    }
+  }
+
+  /** Add one track to Spotify's queue. Resolves false (after reporting) if it failed. */
+  const queueTrack = async (uri: string) => {
+    if (!player.deviceId) {
+      setNotice('Player is still connecting')
+      return false
+    }
+    log.info('app', 'queue track', { uri })
+    try {
+      await addToQueue(player.deviceId, uri)
+      setQueueVersion((v) => v + 1)
+      return true
+    } catch (e) {
+      report(e)
+      return false
+    }
+  }
+
+  /**
+   * Empty Spotify's queue. There's no endpoint for it, but starting playback
+   * clears the queue, so restart the current track where it already is (and
+   * pause again if it was paused). Resolves false (after reporting) if it failed.
+   */
+  const clearQueue = async () => {
+    const { track, contextUri, paused } = player.state
+    if (!player.deviceId || !track) return false
+    log.info('app', 'clear queue', { uri: track.uri, position })
+    try {
+      await playContext(player.deviceId, contextUri, track.uri, position)
+      if (paused) await player.pause()
+      setQueueVersion((v) => v + 1)
+      return true
+    } catch (e) {
+      report(e)
+      return false
+    }
+  }
+
   const connect = () => login().catch(report)
 
   const seek = (ms: number) => {
     log.info('app', 'seek', { ms })
     player.seek(ms)?.catch(report)
   }
-  const { track, upNext, paused } = player.state
+  const { track, upNext, paused, contextName } = player.state
+  // What's playing, by name if Spotify will tell us, else by kind ("Playlist").
+  // Not where the strips came from: the queue fallback is an implementation
+  // detail, and it still shows the rest of the playlist.
+  const heading = strips.name ?? contextName ?? (strips.source === 'context' ? track?.album : null)
+    ?? contextLabel(player.state.contextUri)
 
   if (!loggedIn || !powered) {
     return (
@@ -165,37 +248,76 @@ export default function App() {
         )}
       </div>
 
-      <div className="scene">
-        <Turntable track={track} paused={paused} positionMs={position} onToggle={player.togglePlay} onSeek={seek}>
-          <VuMeter
-            trackKey={track ? `${track.name}|${track.artists}` : null}
-            playing={!!track && !paused}
-            volume={player.volume}
-          />
-        </Turntable>
+      {theme === 'jukebox' ? (
+        <Jukebox
+          track={track}
+          paused={paused}
+          positionMs={position}
+          heading={heading}
+          strips={strips.tracks}
+          page={shownPage}
+          volume={player.volume}
+          isFullscreen={isFullscreen}
+          neon={neon}
+          attract={attract}
+          onPage={(p) => setPage(Math.min(Math.max(p, 0), pages - 1))}
+          onPlayTrack={playTrack}
+          onQueueTrack={queueTrack}
+          onClearQueue={clearQueue}
+          onToggle={player.togglePlay}
+          onPrevious={player.previous}
+          onNext={player.next}
+          onSeek={seek}
+          onVolume={player.setVolume}
+          onCrate={() => setCrateOpen(true)}
+          onFullscreen={toggleFullscreen}
+          onTheme={toggleTheme}
+        />
+      ) : (
+        <div className="scene drift">
+          <Turntable track={track} paused={paused} positionMs={position} onToggle={player.togglePlay} onSeek={seek}>
+            <VuMeter
+              trackKey={track ? `${track.name}|${track.artists}` : null}
+              playing={!!track && !paused}
+              volume={player.volume}
+            />
+          </Turntable>
 
-        <aside className="info">
-          <NowPlaying track={track} upNext={upNext} paused={paused} positionMs={position} onSeek={seek} />
-          <Transport
-            paused={paused}
-            hasTrack={!!track}
-            volume={player.volume}
-            isFullscreen={isFullscreen}
-            onToggle={player.togglePlay}
-            onPrevious={player.previous}
-            onNext={player.next}
-            onVolume={player.setVolume}
-            onCrate={() => setCrateOpen(true)}
-            onFullscreen={toggleFullscreen}
-          />
-        </aside>
-      </div>
+          <aside className="info">
+            <NowPlaying track={track} upNext={upNext} paused={paused} positionMs={position} onSeek={seek} />
+            <Transport
+              paused={paused}
+              hasTrack={!!track}
+              volume={player.volume}
+              isFullscreen={isFullscreen}
+              onToggle={player.togglePlay}
+              onPrevious={player.previous}
+              onNext={player.next}
+              onVolume={player.setVolume}
+              onCrate={() => setCrateOpen(true)}
+              onFullscreen={toggleFullscreen}
+              onTheme={toggleTheme}
+            />
+          </aside>
+        </div>
+      )}
 
       {/* Dims the deck behind the crate; clicking it closes the crate. */}
       {crateOpen && <div className="scrim" onClick={() => setCrateOpen(false)} />}
       <Crate open={crateOpen} onPlay={play} onClose={() => setCrateOpen(false)} />
     </main>
   )
+}
+
+/** A generic name for a context whose real name we couldn't get. */
+function contextLabel(uri: string | null): string {
+  if (uri?.endsWith(':collection')) return 'Liked Songs'
+  switch (uri?.split(':')[1]) {
+    case 'playlist': return 'Playlist'
+    case 'album': return 'Album'
+    case 'artist': return 'Artist'
+    default: return 'Up next' // no context: the strips really are the queue
+  }
 }
 
 /** Small record glyph for the start screens. */

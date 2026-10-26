@@ -12,6 +12,7 @@ interface Props {
   onVolume: (v: number) => void
   onCrate: () => void
   onFullscreen: () => void
+  onTheme: () => void
 }
 
 /** Playback and display controls. Fades out with the cursor when idle. */
@@ -40,6 +41,7 @@ export function Transport(p: Props) {
 
       <div className="secondary">
         <button className="text-btn" onClick={p.onCrate} title="Crate (C)"><CrateIcon size={18} /> Crate</button>
+        <button className="text-btn" onClick={p.onTheme} title="Switch theme (T)">Jukebox</button>
         <button className="icon-btn small" onClick={p.onFullscreen} aria-label={p.isFullscreen ? 'Exit fullscreen' : 'Fullscreen'} title="Fullscreen (F)">
           {p.isFullscreen ? <ShrinkIcon size={18} /> : <ExpandIcon size={18} />}
         </button>

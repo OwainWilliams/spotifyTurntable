@@ -16,6 +16,7 @@ import { AuthRequiredError, getAccessToken } from '../spotify/auth'
 import { log } from '../lib/log'
 
 export interface Track {
+  uri: string
   name: string
   artists: string
   album: string
@@ -27,6 +28,9 @@ export interface PlayerState {
   track: Track | null
   /** The next track in the queue, if Spotify told us. */
   upNext: Track | null
+  /** The album or playlist this is playing from; null for a lone track. */
+  contextUri: string | null
+  contextName: string | null
   paused: boolean
   /** Position reported by the SDK at `reportedAt`. See usePosition. */
   positionMs: number
@@ -37,6 +41,7 @@ export type PlayerStatus = 'loading' | 'ready' | 'error'
 
 function toTrack(t: Spotify.Track): Track {
   return {
+    uri: t.uri,
     name: t.name,
     artists: t.artists.map((a) => a.name).join(', '),
     album: t.album.name,
@@ -78,6 +83,8 @@ export function useSpotifyPlayer(enabled: boolean) {
   const [state, setState] = useState<PlayerState>({
     track: null,
     upNext: null,
+    contextUri: null,
+    contextName: null,
     paused: true,
     positionMs: 0,
     reportedAt: Date.now(),
@@ -188,6 +195,8 @@ export function useSpotifyPlayer(enabled: boolean) {
         setState({
           track: toTrack(s.track_window.current_track),
           upNext: s.track_window.next_tracks?.[0] ? toTrack(s.track_window.next_tracks[0]) : null,
+          contextUri: s.context?.uri || null,
+          contextName: s.context?.metadata?.name || null,
           paused: s.paused,
           positionMs: s.position,
           reportedAt: Date.now(),
@@ -231,6 +240,7 @@ export function useSpotifyPlayer(enabled: boolean) {
     clearError: () => setError(null),
     state,
     togglePlay: () => playerRef.current?.togglePlay(),
+    pause: () => playerRef.current?.pause(),
     next: () => playerRef.current?.nextTrack(),
     previous: () => playerRef.current?.previousTrack(),
     seek: (ms: number) => playerRef.current?.seek(ms),

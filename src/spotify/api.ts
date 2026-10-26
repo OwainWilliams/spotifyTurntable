@@ -78,7 +78,13 @@ async function request<T>(path: string, init: RequestInit = {}, attempts = 3): P
       continue
     }
 
-    if (res.ok) return res.status === 204 ? (undefined as T) : ((await res.json()) as T)
+    if (res.ok) {
+      // Some write endpoints (e.g. add to queue) answer 200 with an empty or
+      // plain-text body rather than 204, so only parse what claims to be JSON.
+      const isJson = res.headers.get('Content-Type')?.includes('json')
+      const text = res.status === 204 || !isJson ? '' : await res.text()
+      return (text ? JSON.parse(text) : undefined) as T
+    }
 
     const retryable = res.status === 401 || res.status === 429 || res.status >= 502
     if (!retryable || attempt >= attempts) {
@@ -159,10 +165,111 @@ export async function transferPlayback(deviceId: string, play = false): Promise<
   }
 }
 
-/** Start a playlist or album (a "context") on the given device. */
-export const playContext = (deviceId: string, contextUri: string) =>
+/**
+ * Start a playlist or album (a "context") on the given device, optionally at
+ * a given track and position. With no context, plays just that track.
+ * Starting playback also empties the user's queue, which is how clearQueue works.
+ */
+export const playContext = (deviceId: string, contextUri: string | null, trackUri?: string, positionMs?: number) =>
   request<void>(`/me/player/play?device_id=${deviceId}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ context_uri: contextUri }),
+    body: JSON.stringify({
+      ...(contextUri
+        ? { context_uri: contextUri, ...(trackUri ? { offset: { uri: trackUri } } : {}) }
+        : { uris: [trackUri] }),
+      ...(positionMs ? { position_ms: Math.round(positionMs) } : {}),
+    }),
   })
+
+/** Add a track to the end of Spotify's queue (it can't be removed again via the API). */
+export const addToQueue = (deviceId: string, trackUri: string) =>
+  request<void>(`/me/player/queue?uri=${encodeURIComponent(trackUri)}&device_id=${deviceId}`, { method: 'POST' })
+
+// ---- context contents (jukebox title strips) -------------------------------
+
+export interface ContextTrack {
+  uri: string
+  name: string
+  artists: string
+}
+
+interface ApiTrack {
+  type?: string
+  uri: string
+  name: string
+  artists: { name: string }[] | null
+}
+
+const toContextTrack = (t: ApiTrack): ContextTrack => ({
+  uri: t.uri,
+  name: t.name,
+  artists: t.artists?.map((a) => a.name).join(', ') ?? '',
+})
+
+/** Episodes and local files can't be offered as strips; nulls are removed tracks. */
+const isTrack = (t: ApiTrack | null | undefined): t is ApiTrack =>
+  t != null && (t.type ?? 'track') === 'track' && t.uri.startsWith('spotify:track:')
+
+/**
+ * 8 pages of 18 jukebox strips. That is where the selection codes run out
+ * (24 letters x 6), and it keeps a 2,000-track playlist to 3 requests.
+ */
+const MAX_CONTEXT_TRACKS = 144
+
+/** Like all(), but stops after `max` items. */
+async function upTo<T>(firstPath: string, max: number): Promise<T[]> {
+  const out: T[] = []
+  let next: string | null = firstPath
+  while (next && out.length < max) {
+    const page: Page<T> = await request<Page<T>>(next)
+    out.push(...page.items)
+    next = page.next
+  }
+  return out.slice(0, max)
+}
+
+/**
+ * The tracks of an album, playlist or Liked Songs, in play order.
+ * Since Feb 2026, playlist contents are only readable for playlists the user
+ * owns or collaborates on; others fail with 403 and the caller falls back to
+ * the queue. Contents of a playlist use `item` (pre-2026: `track`).
+ */
+export async function getContextTracks(contextUri: string): Promise<ContextTrack[]> {
+  const [, kind, id] = contextUri.split(':')
+  let tracks: (ApiTrack | null | undefined)[]
+  if (kind === 'album') {
+    tracks = await upTo<ApiTrack>(`/albums/${id}/tracks?limit=50`, MAX_CONTEXT_TRACKS)
+  } else if (kind === 'playlist') {
+    const rows = await upTo<{ item?: ApiTrack | null; track?: ApiTrack | null } | null>(
+      `/playlists/${id}/items?limit=50`, MAX_CONTEXT_TRACKS)
+    tracks = rows.map((r) => r?.item ?? r?.track)
+  } else if (contextUri.endsWith(':collection')) {
+    const rows = await upTo<{ track: ApiTrack | null } | null>('/me/tracks?limit=50', MAX_CONTEXT_TRACKS)
+    tracks = rows.map((r) => r?.track)
+  } else {
+    throw new SpotifyApiError(404, `Can't list the contents of ${kind ?? 'this context'}`)
+  }
+  return tracks.filter(isTrack).map(toContextTrack)
+}
+
+/**
+ * Display name of an album or playlist. A playlist's name is readable even
+ * when its contents aren't (see getContextTracks).
+ */
+export async function getContextName(contextUri: string): Promise<string | null> {
+  const [, kind, id] = contextUri.split(':')
+  if (kind === 'playlist') return (await request<{ name: string }>(`/playlists/${id}?fields=name`)).name
+  if (kind === 'album') return (await request<{ name: string }>(`/albums/${id}`)).name
+  if (kind === 'artist') return (await request<{ name: string }>(`/artists/${id}`)).name
+  if (contextUri.endsWith(':collection')) return 'Liked Songs'
+  return null
+}
+
+/** What's playing now followed by what Spotify will play next (about 20 tracks). */
+export async function getQueue(): Promise<ContextTrack[]> {
+  const q = await request<{ currently_playing: ApiTrack | null; queue: (ApiTrack | null)[] } | undefined>(
+    '/me/player/queue')
+  if (!q) return []
+  return [q.currently_playing, ...q.queue].filter(isTrack).map(toContextTrack)
+}

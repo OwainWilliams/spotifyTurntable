@@ -5,11 +5,11 @@ A fullscreen virtual turntable for a spare screen. Album art spins as the record
 ## Setup
 
 1. Create an app at <https://developer.spotify.com/dashboard>
-   - Redirect URI: `http://127.0.0.1:5173/callback`
+   - Redirect URI: `http://127.0.0.1:4545/callback`
    - APIs: Web API, Web Playback SDK
 2. `cp .env.example .env` and paste your Client ID.
 3. `npm install` then `npm run dev`
-4. Open <http://127.0.0.1:5173> (not `localhost`, Spotify rejects it).
+4. Open <http://127.0.0.1:4545> (not `localhost`, Spotify rejects it).
 
 ## Keys
 
@@ -30,7 +30,7 @@ Opening the crate focuses its search box: type to filter playlists and albums by
 Run it on the dedicated screen without browser chrome:
 
 ```
-chrome --kiosk --app=http://127.0.0.1:5173
+chrome --kiosk --app=http://127.0.0.1:4545
 ```
 
 Later: wrap in Tauri for a proper desktop app and auto-start.
