@@ -4,6 +4,10 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Turntable</title>
+    <!-- Makes it installable as a Chrome app (own window, taskbar icon). -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="theme-color" content="#16110e" />
     <!-- Spotify's player SDK. It calls window.onSpotifyWebPlaybackSDKReady when loaded. -->
     <script src="https://sdk.scdn.co/spotify-player.js"></script>
   </head>

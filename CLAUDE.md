@@ -27,6 +27,9 @@ src/components/                Turntable, VuMeter, NowPlaying (track info + prog
 src/assets/walnut.svg          generated wood grain (SVG noise filters) for the plinth
 src/styles.css                 all styling; deck internals in cqw
 src/App.tsx                    wiring, keyboard shortcuts, single report() for errors
+public/                        web app manifest + icons (icons drawn by scripts/make-icons.py, needs Pillow)
+scripts/turntable.ps1          desktop launcher: ensures `vite preview` is up on 4545, opens a Chrome --app window
+scripts/startup.ps1            adds/removes a Startup-folder shortcut to the launcher
 ```
 
 ## Decisions already made (don't relitigate without reason)
@@ -44,6 +47,8 @@ src/App.tsx                    wiring, keyboard shortcuts, single report() for e
 - Disc rotation uses `animation-play-state` so it stops in place rather than snapping.
 - `transferPlayback` retries 404 because the SDK device takes a moment to register with Spotify.
 - If the SDK device drops mid-session (`not_ready`), `useSpotifyPlayer` reconnects the same `Player` with backoff (1s doubling, capped at 30s, forever) and a 20s deadline per attempt. Auth, Premium and DRM errors stop retrying. A reconnect does not re-transfer playback; pick from the crate to resume.
+
+- Packaged as an installable Chrome app (manifest + `npm run app` launcher), not Tauri: the SDK needs Widevine, which WebView2 lacks; castLabs' Electron build is the fallback if a real installer is ever wanted. No service worker: the app is useless offline anyway, and a cache would only serve stale builds. `launch_handler: focus-existing` because a second window would be a second Spotify device fighting the first.
 
 ## Known gotchas
 
@@ -66,7 +71,6 @@ src/App.tsx                    wiring, keyboard shortcuts, single report() for e
 ## Not yet built
 
 - Jukebox portrait layout (it letterboxes at 16:9) and beat-linked jukebox lighting (VuMeter's `--level` trick would do it).
-- Tauri wrapper (borderless fullscreen on a chosen monitor, auto-start). Do the kiosk-mode Chrome check first: `chrome --kiosk --app=http://127.0.0.1:4545`.
 - Non-Premium fallback (poll `/me/player/currently-playing`) is out of scope.
 
 ## Commands
@@ -75,4 +79,6 @@ src/App.tsx                    wiring, keyboard shortcuts, single report() for e
 npm install
 npm run dev       # http://127.0.0.1:4545
 npm run build     # tsc -b && vite build
+npm run app       # build, serve on 4545 in the background, open the Chrome app window
+npm run app:startup [-- -Remove]   # start it at Windows sign-in
 ```

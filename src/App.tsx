@@ -199,6 +199,13 @@ export default function App() {
 
   const connect = () => login().catch(report)
 
+  // Running as the installed app, there's no browser around it to want back,
+  // so use the Power on click (fullscreen needs a user gesture) to go fullscreen.
+  const powerOn = () => {
+    setPowered(true)
+    if (matchMedia('(display-mode: standalone)').matches && !document.fullscreenElement) toggleFullscreen()
+  }
+
   const seek = (ms: number) => {
     log.info('app', 'seek', { ms })
     player.seek(ms)?.catch(report)
@@ -222,7 +229,7 @@ export default function App() {
             <button className="primary" onClick={connect}>Connect Spotify</button>
           ) : (
             <>
-              <button className="primary" onClick={() => setPowered(true)}>Power on</button>
+              <button className="primary" onClick={powerOn}>Power on</button>
               <button className="link" onClick={() => { logout(); setLoggedIn(false) }}>Sign out</button>
             </>
           )}

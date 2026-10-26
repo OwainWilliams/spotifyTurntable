@@ -25,15 +25,21 @@ A fullscreen virtual turntable for a spare screen. Album art spins as the record
 
 Opening the crate focuses its search box: type to filter playlists and albums by name or artist (accents optional), Enter plays the top match. Click the record or the Start · Stop button to play/pause. Drag the tonearm, or click the progress bar, to seek. The VU meter on the plinth is for show: it pulses at a steady tempo picked per track rather than following the real audio, because Spotify's stream is DRM-protected and the page can't hear it. The deck drifts by about 1% of the screen over ~20 minutes so nothing static burns into an OLED. Cursor and controls hide after 3 s idle; the track details stay up.
 
-## Kiosk mode
-
-Run it on the dedicated screen without browser chrome:
+## Run it as an app
 
 ```
-chrome --kiosk --app=http://127.0.0.1:4545
+npm run app            # build, start the local server, open the app window
+npm run app:startup    # also start it whenever you sign in to Windows
+npm run app:startup -- -Remove
 ```
 
-Later: wrap in Tauri for a proper desktop app and auto-start.
+`npm run app` serves the built site on 127.0.0.1:4545 in the background (Spotify's login must come back to that address, so a server has to be listening) and opens it in a borderless, fullscreen Chrome app window. Running it again reuses the server and focuses the existing window. The start-up shortcut skips the rebuild so sign-in stays quick; run `npm run app` after changing code.
+
+For a Start menu and taskbar icon, open the app and choose **Install Turntable** from Chrome's menu (or the install icon in the address bar). Installed, the Power on click also takes it fullscreen.
+
+It's a Chrome app rather than Tauri or plain Electron because Spotify's player needs Widevine DRM, which Chrome ships and Windows' WebView2 doesn't.
+
+Plain kiosk mode still works too: `chrome --kiosk --app=http://127.0.0.1:4545`.
 
 ## Layout
 
