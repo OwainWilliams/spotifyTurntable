@@ -50,6 +50,7 @@ export function Crate({ open, onPlay, onClose }: Props) {
   // box would swallow every shortcut.
   useEffect(() => {
     if (!open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset alongside the blur (a DOM side effect)
       setQuery('')
       searchRef.current?.blur()
       return
@@ -92,8 +93,8 @@ export function Crate({ open, onPlay, onClose }: Props) {
   }
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on first open
     if (open && !items && !error) load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, items, error])
 
   return (

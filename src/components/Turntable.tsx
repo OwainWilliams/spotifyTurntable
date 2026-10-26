@@ -53,6 +53,7 @@ export function Turntable({ track, paused, positionMs, onToggle, onSeek, childre
   // few seconds if it never does (seek failed; App reports the error).
   useEffect(() => {
     if (!held) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the SDK's position caught up with the seek
     if (Math.abs(positionMs - held.targetMs) < 1500) setHeld(null)
   }, [held, positionMs])
   useEffect(() => {

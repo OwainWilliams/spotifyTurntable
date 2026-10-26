@@ -84,21 +84,16 @@ export function useContextTracks(
   // The marquee's name for the context. The SDK's context metadata often has
   // no name, so look it up once per context. Cosmetic, so a failure is only
   // logged: the marquee just shows less.
-  const names = useRef(new Map<string, string | null>())
-  const [name, setName] = useState<string | null>(null)
+  // The cache is state, so the name is just read from it during render.
+  const [names, setNames] = useState<Record<string, string | null>>({})
+  const name = enabled && contextUri ? names[contextUri] ?? null : null
   useEffect(() => {
-    if (!enabled || !contextUri) return setName(null)
-    if (names.current.has(contextUri)) return setName(names.current.get(contextUri)!)
-    let cancelled = false
-    setName(null)
+    if (!enabled || !contextUri || contextUri in names) return
+    // A late answer for an old context is still worth caching, so no cancel.
     getContextName(contextUri)
-      .then((n) => {
-        names.current.set(contextUri, n)
-        if (!cancelled) setName(n)
-      })
+      .then((n) => setNames((all) => ({ ...all, [contextUri]: n })))
       .catch((e) => log.warn('strips', 'context name lookup failed', { contextUri, e }))
-    return () => { cancelled = true }
-  }, [enabled, contextUri])
+  }, [enabled, contextUri, names])
 
   return { tracks, source, name, error }
 }

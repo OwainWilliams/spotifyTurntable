@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties } from 'react'
+import { useEffect, useLayoutEffect, useRef, type CSSProperties } from 'react'
 
 interface Props {
   /** Changes when the track changes; picks the simulated tempo. */
@@ -24,12 +24,13 @@ const SEGMENTS = 12
  * raising PropertyChanged 60 times a second.
  */
 export function VuMeter({ trackKey, playing, volume }: Props) {
-  const channels = [useRef<HTMLDivElement>(null), useRef<HTMLDivElement>(null)]
+  /** The two bar elements (L, R), filled in by callback refs. */
+  const channels = useRef<(HTMLDivElement | null)[]>([null, null])
   // The loop reads the latest props from here, so it never has to restart.
   const live = useRef({ playing, volume, bpm: 110 })
-  live.current.playing = playing
-  live.current.volume = volume
-  live.current.bpm = trackKey ? tempoFor(trackKey) : 110
+  useLayoutEffect(() => {
+    live.current = { playing, volume, bpm: trackKey ? tempoFor(trackKey) : 110 }
+  })
 
   useEffect(() => {
     let frame = 0
@@ -49,7 +50,7 @@ export function VuMeter({ trackKey, playing, volume }: Props) {
       const kick = Math.exp(-t * 3) * accent           // sharp hit, decays over the beat
       const hat = 0.35 * Math.exp(-((t + 0.5) % 1) * 10) // smaller off-beat
 
-      channels.forEach((ref, c) => {
+      channels.current.forEach((el, c) => {
         wobble[c] = Math.min(Math.max(wobble[c] * 0.98 + (Math.random() - 0.5) * dt * 3, -0.15), 0.15)
         // sqrt: loudness isn't linear in the slider, and this keeps the meter
         // lively at moderate volume. At 80% beats reach amber, accents red.
@@ -57,20 +58,19 @@ export function VuMeter({ trackKey, playing, volume }: Props) {
         // Real meters jump up fast and fall back slowly.
         const rate = target > level[c] ? 60 : 6
         level[c] += (target - level[c]) * Math.min(1, dt * rate)
-        ref.current?.style.setProperty('--level', level[c].toFixed(3))
+        el?.style.setProperty('--level', level[c].toFixed(3))
       })
       frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
     <div className="vu" aria-hidden="true">
-      {channels.map((ref, c) => (
+      {['L', 'R'].map((label, c) => (
         <div className="vu-channel" key={c}>
-          <div className="vu-bars" ref={ref}>
+          <div className="vu-bars" ref={(el) => { channels.current[c] = el }}>
             {Array.from({ length: SEGMENTS }, (_, i) => (
               <span
                 key={i}
@@ -79,7 +79,7 @@ export function VuMeter({ trackKey, playing, volume }: Props) {
               />
             ))}
           </div>
-          <small>{c ? 'R' : 'L'}</small>
+          <small>{label}</small>
         </div>
       ))}
     </div>
@@ -87,7 +87,7 @@ export function VuMeter({ trackKey, playing, volume }: Props) {
 }
 
 /** Stable pseudo-tempo per track: a string hash mapped to 88-130 BPM. */
-function tempoFor(key: string): number {
+export function tempoFor(key: string): number {
   let h = 5381
   for (let i = 0; i < key.length; i++) h = ((h * 33) ^ key.charCodeAt(i)) >>> 0
   return 88 + (h % 43)

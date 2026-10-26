@@ -61,7 +61,7 @@ export function useAlbumColour(url: string | null): AlbumColours {
 }
 
 /** Hue in degrees (0-359) of an RGB colour. */
-function hueOf(r: number, g: number, b: number): number {
+export function hueOf(r: number, g: number, b: number): number {
   const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min
   if (!d) return 0
   const h = max === r ? ((g - b) / d) % 6 : max === g ? (b - r) / d + 2 : (r - g) / d + 4

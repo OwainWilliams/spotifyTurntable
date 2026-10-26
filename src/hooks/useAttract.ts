@@ -21,25 +21,29 @@ export function useAttract(enabled: boolean): AttractPhase {
   const [phase, setPhase] = useState<AttractPhase>('off')
 
   useEffect(() => {
-    setPhase('off')
     if (!enabled) return
     let timers: number[] = []
-    const restart = () => {
+    const schedule = () => {
       timers.forEach(clearTimeout)
-      setPhase('off')
       timers = [
         window.setTimeout(() => setPhase('attract'), ATTRACT_AFTER),
         window.setTimeout(() => setPhase('asleep'), ATTRACT_AFTER + SLEEP_AFTER),
       ]
     }
-    restart()
+    const restart = () => {
+      setPhase('off')
+      schedule()
+    }
+    // Phase is already 'off' here: it starts that way and the cleanup resets it.
+    schedule()
     const events = ['mousemove', 'mousedown', 'keydown', 'touchstart']
     events.forEach((e) => window.addEventListener(e, restart))
     return () => {
       timers.forEach(clearTimeout)
+      setPhase('off')
       events.forEach((e) => window.removeEventListener(e, restart))
     }
   }, [enabled])
 
-  return phase
+  return enabled ? phase : 'off'
 }

@@ -13,6 +13,7 @@ export function usePosition(state: PlayerState): number {
 
   useEffect(() => {
     if (state.paused) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing from an SDK event
       setPosition(state.positionMs)
       return
     }

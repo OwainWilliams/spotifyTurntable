@@ -80,7 +80,7 @@ export function useSpotifyPlayer(enabled: boolean) {
   const [deviceId, setDeviceId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [volume, setVolumeState] = useState(savedVolume)
-  const [state, setState] = useState<PlayerState>({
+  const [state, setState] = useState<PlayerState>(() => ({
     track: null,
     upNext: null,
     contextUri: null,
@@ -88,7 +88,7 @@ export function useSpotifyPlayer(enabled: boolean) {
     paused: true,
     positionMs: 0,
     reportedAt: Date.now(),
-  })
+  }))
 
   useEffect(() => {
     if (!enabled) return

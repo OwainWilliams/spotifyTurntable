@@ -22,7 +22,7 @@ const savedQueueMode = () => {
  * Strip i's selection code. Strips fill each column top to bottom, and every
  * column across all pages has its own letter: page 1 is A-C, page 2 D-F.
  */
-function codeFor(i: number): string {
+export function codeFor(i: number): string {
   const page = Math.floor(i / PER_PAGE)
   const within = i % PER_PAGE
   return LETTERS[page * COLS + Math.floor(within / ROWS)] + (within % ROWS + 1)
@@ -72,7 +72,11 @@ export function Jukebox(p: Props) {
   const { track, strips, page } = p
   const pages = Math.max(1, Math.ceil(strips.length / PER_PAGE))
   /** Letter pressed on the keypad, waiting for its number. */
-  const [pending, setPending] = useState<string | null>(null)
+  // The letter half of a code, remembered with its page: a half-entered code
+  // means nothing on another page, so it lapses when the page changes.
+  const [pendingAt, setPendingAt] = useState<{ letter: string; page: number } | null>(null)
+  const pending = pendingAt?.page === page ? pendingAt.letter : null
+  const setPending = (letter: string | null) => setPendingAt(letter ? { letter, page } : null)
   /** Selections add to the queue instead of playing now. */
   const [queueMode, setQueueMode] = useState(savedQueueMode)
   /** Tracks this screen has queued, in order, until each starts playing. */
@@ -85,13 +89,15 @@ export function Jukebox(p: Props) {
   // A queued track that starts playing has been served; drop its badge.
   // (Spotify's API can't list or remove queue entries, so this is our own
   // record of what we added, not Spotify's.)
+  const trackUri = track?.uri
   useEffect(() => {
-    if (!track) return
+    if (!trackUri) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to Spotify moving on to a new track
     setQueued((q) => {
-      const at = q.indexOf(track.uri)
+      const at = q.indexOf(trackUri)
       return at < 0 ? q : [...q.slice(0, at), ...q.slice(at + 1)]
     })
-  }, [track?.uri])
+  }, [trackUri])
 
   const playingIndex = track ? strips.findIndex((s) => s.uri === track.uri) : -1
 
@@ -102,9 +108,6 @@ export function Jukebox(p: Props) {
     if (playingIndex >= 0) p.onPage(Math.floor(playingIndex / PER_PAGE))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [playingIndex])
-
-  // A half-entered code means nothing on another page.
-  useEffect(() => setPending(null), [page])
 
   // Attract mode leafs through the pages on its own.
   useEffect(() => {

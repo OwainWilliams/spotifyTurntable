@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AuthRequiredError, NetworkError, getClientId, handleCallback, isCallback, isLoggedIn, login, logout } from './spotify/auth'
 import { addToQueue, playContext, transferPlayback } from './spotify/api'
 import { useSpotifyPlayer } from './player/useSpotifyPlayer'
@@ -19,6 +19,7 @@ import { Crate } from './components/Crate'
 import { VuMeter } from './components/VuMeter'
 import { Jukebox, PER_PAGE } from './components/Jukebox'
 import { Setup } from './components/Setup'
+import { contextLabel } from './lib/contextLabel'
 
 /**
  * Three screens, one component (plus first-run setup for the Client ID):
@@ -99,11 +100,13 @@ export default function App() {
   }, [online])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- surfacing a hook's error through report()
     if (strips.error) report(strips.error)
   }, [strips.error])
 
   // Clear a stale network notice when the connection comes back.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- responding to the browser going back online
     if (online) setNotice((n) => (n?.startsWith('Lost contact') ? null : n))
   }, [online])
 
@@ -117,7 +120,8 @@ export default function App() {
   // the newly added one, so the first key after idle did nothing.
   // .NET analogy: subscribe in the constructor, read current state from a field.
   const keyDeps = useRef({ player, toggleFullscreen, toggleTheme, pages })
-  keyDeps.current = { player, toggleFullscreen, toggleTheme, pages }
+  // Updated after each render (not during it, which React may discard/replay).
+  useLayoutEffect(() => { keyDeps.current = { player, toggleFullscreen, toggleTheme, pages } })
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return
@@ -331,17 +335,6 @@ export default function App() {
       <Crate open={crateOpen} onPlay={play} onClose={() => setCrateOpen(false)} />
     </main>
   )
-}
-
-/** A generic name for a context whose real name we couldn't get. */
-function contextLabel(uri: string | null): string {
-  if (uri?.endsWith(':collection')) return 'Liked Songs'
-  switch (uri?.split(':')[1]) {
-    case 'playlist': return 'Playlist'
-    case 'album': return 'Album'
-    case 'artist': return 'Artist'
-    default: return 'Up next' // no context: the strips really are the queue
-  }
 }
 
 /** Small record glyph for the start screens. */
