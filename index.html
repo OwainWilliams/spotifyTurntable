@@ -4,6 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Turntable</title>
+    <!-- The login redirect URI is built from this page's address, and Spotify
+         only accepts http:// for loopback. GitHub Pages also answers on plain
+         http, so hop to https before anything else runs. -->
+    <script>
+      if (location.protocol === 'http:' && !/^(127\.0\.0\.1|localhost|\[::1\])$/.test(location.hostname)) {
+        location.replace('https:' + location.href.slice(5))
+      }
+    </script>
     <!-- Makes it installable as a Chrome app (own window, taskbar icon). -->
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/png" href="/favicon.png" />
