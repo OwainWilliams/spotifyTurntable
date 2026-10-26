@@ -6,18 +6,21 @@ Owner is a senior .NET developer learning React/TS. When explaining changes, pre
 
 ## Stack and constraints
 
-- React 18 + Vite + TypeScript, strict mode, no state library, no CSS framework, no router. Keep it that way; the app is ~1,000 lines and should stay readable in one sitting.
+- React 18 + Vite 8 + TypeScript 5.9, strict mode, no state library, no CSS framework, no router. Keep it that way; the app is ~1,000 lines and should stay readable in one sitting.
 - Auth is PKCE, fully client-side, no backend. Redirect URI defaults to the app's own root URL (e.g. `http://127.0.0.1:4545/`, or the Pages URL); the callback is detected by `?code`/`?error` + `state`, not by path, because static hosts 404 on `/callback`. `VITE_SPOTIFY_REDIRECT_URI` overrides it (the owner's local setup still uses `/callback`). Spotify rejects `localhost`; use 127.0.0.1.
 - Bring your own Client ID: Dev Mode apps only work for their owner plus a small allowlist, and Extended Quota is business-only, so each user creates their own Spotify app. First run shows `Setup` and stores the ID in localStorage (`turntable.clientId`); `.env`'s `VITE_SPOTIFY_CLIENT_ID` is the fallback. Never commit `.env`, and never set a Client ID in the Pages build.
 - `vite.config.ts` reads `BASE_PATH` (the Pages workflow sets `/<repo>/`); keep asset and manifest URLs relative or base-aware.
 - Web Playback SDK is loaded via `<script>` in `index.html` and exposes `window.Spotify`; types from `@types/spotify-web-playback-sdk`.
-- Pin dependency versions. Spotify's API has removed endpoints with little notice, so treat it as the one external thing that can change underneath us.
+- Pin dependency versions (exact, no ^). Spotify's API has removed endpoints with little notice, so treat it as the one external thing that can change underneath us. GitHub Actions are pinned to commit SHAs with the tag in a comment. Dependabot proposes updates weekly (7-day cooldown).
+- `npm run check` (lint + tests + build) must pass; CI runs it on PRs and before every Pages deploy.
 
 ## Layout
 
 ```
 src/lib/log.ts                 structured logger, ring buffer + localStorage, press L to download
 src/lib/clock.ts               ms -> "m:ss"
+src/lib/contextLabel.ts        fallback marquee label ("Playlist", "Up next"...)
+src/**/*.test.ts               Vitest unit tests for the pure helpers and auth's storage/callback logic
 src/spotify/auth.ts            PKCE login, coalesced token refresh, AuthRequiredError / NetworkError
 src/spotify/api.ts             typed Web API calls with retry policy (401 refresh, 429 Retry-After, 5xx backoff)
 src/player/useSpotifyPlayer.ts SDK lifecycle as a hook; returns status, deviceId, state (incl. contextUri), controls
@@ -31,7 +34,11 @@ src/App.tsx                    wiring, keyboard shortcuts, single report() for e
 public/                        web app manifest + icons (icons drawn by scripts/make-icons.py, needs Pillow)
 scripts/turntable.ps1          desktop launcher: ensures `vite preview` is up on 4545, opens a Chrome --app window
 scripts/startup.ps1            adds/removes a Startup-folder shortcut to the launcher
-.github/workflows/pages.yml    builds with BASE_PATH=/<repo>/ and deploys to GitHub Pages on push to main
+.github/workflows/pages.yml    lint + test, builds with BASE_PATH=/<repo>/, deploys to GitHub Pages on push to main
+.github/workflows/ci.yml       lint + test + build on pull requests
+.github/dependabot.yml         weekly npm + Actions update PRs
+eslint.config.js               flat config: recommended + typescript-eslint + react-hooks (incl. React Compiler rules)
+docs/                          README screenshots
 ```
 
 ## Decisions already made (don't relitigate without reason)
@@ -52,6 +59,9 @@ scripts/startup.ps1            adds/removes a Startup-folder shortcut to the lau
 
 - Packaged as an installable Chrome app (manifest + `npm run app` launcher), not Tauri: the SDK needs Widevine, which WebView2 lacks; castLabs' Electron build is the fallback if a real installer is ever wanted. No service worker: the app is useless offline anyway, and a cache would only serve stale builds. `launch_handler: focus-existing` because a second window would be a second Spotify device fighting the first.
 
+- Content-Security-Policy is a `<meta>` (Pages can't send headers), injected at build time by the plugin in vite.config.ts at the `<!-- csp: -->` marker in index.html, right after `<meta charset>`. Build only, because the dev server needs inline scripts and a websocket. Inline scripts are allowed by hash, computed at build. Allowed: `sdk.scdn.co` (script + frame), `api.spotify.com` / `accounts.spotify.com` (connect), Spotify image hosts (img). Verified against real playback, the crate and both themes; a new external host needs adding there.
+- Lint: `react-hooks/set-state-in-effect` is suppressed line by line, each with a reason, only where the effect copies an outside source (SDK, browser, network) into state. Prefer deriving during render (see `useAttract`, the jukebox's pending letter, `useContextTracks`' name cache).
+
 ## Known gotchas
 
 - Browsers require a user gesture before audio; that's what the "Power on" button is for.
@@ -70,6 +80,9 @@ scripts/startup.ps1            adds/removes a Startup-folder shortcut to the lau
 - The Log button was removed from the UI; L still downloads the log, and the crash screen still offers it.
 - Album art is square; the circular label crop clips corners. Acceptable for now.
 
+- npm 10.9 (Node 22's bundled npm) crashes with `Cannot read properties of null (reading 'edgesOut')` when resolving Vitest's peer dependencies. Change dependencies with `npx npm@11.6.2 install ...`; plain `npm ci` (what CI runs) is fine with the resulting lockfile.
+- The CSP hash of an inline script must be computed on LF line endings: browsers normalise CRLF before hashing, and files edited on Windows can be CRLF. The plugin normalises; keep it that way.
+
 ## Not yet built
 
 - Jukebox portrait layout (it letterboxes at 16:9) and beat-linked jukebox lighting (VuMeter's `--level` trick would do it).
@@ -80,7 +93,10 @@ scripts/startup.ps1            adds/removes a Startup-folder shortcut to the lau
 ```
 npm install
 npm run dev       # http://127.0.0.1:4545
-npm run build     # tsc -b && vite build
+npm run build     # tsc -b && vite build (adds the CSP)
+npm run lint      # eslint .
+npm test          # vitest run
+npm run check     # lint + test + build, as CI does
 npm run app       # build, serve on 4545 in the background, open the Chrome app window
 npm run app:startup [-- -Remove]   # start it at Windows sign-in
 ```

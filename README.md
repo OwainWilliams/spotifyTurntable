@@ -1,6 +1,12 @@
 # Spotify Turntable
 
-A fullscreen virtual turntable for a spare screen. Album art spins as the record label, the tonearm tracks progress, and your playlists and saved albums live in a slide-out crate. Audio plays in the browser via Spotify's Web Playback SDK (Premium required).
+A fullscreen record player for a spare screen. Album art spins as the record label, the tonearm tracks progress, and your playlists and saved albums live in a slide-out crate. Press T for the second look: a title-strip jukebox whose neon takes its colour from the record. Audio plays in the browser via Spotify's Web Playback SDK (Premium required).
+
+**Try it: <https://thesecretstage.vip/spotifyTurntable/>** (you'll need your own free Spotify developer app; the page walks you through it).
+
+![The turntable theme: a walnut deck with the album art as the record label, next to the track details](docs/turntable.jpg)
+
+![The jukebox theme: neon marquee, the playing single under a glass dome, and a wall of A1-C6 title strips](docs/jukebox.jpg)
 
 ## Setup
 
@@ -27,6 +33,8 @@ Optionally put a Client ID in `.env` (see `.env.example`) to skip the setup scre
 | ← → | Previous / next track |
 | ↑ ↓ | Volume up / down |
 | C | Open the crate |
+| T | Switch between turntable and jukebox |
+| Page Up / Down | Jukebox: previous / next page of strips |
 | F | Fullscreen |
 | L | Download the debug log |
 | Esc | Clear the crate search, then close the crate |
@@ -53,15 +61,28 @@ Plain kiosk mode still works too: `chrome --kiosk --app=http://127.0.0.1:4545`.
 
 ```
 src/
-  spotify/auth.ts        PKCE login, token refresh (no backend, no secret)
-  spotify/api.ts         Typed Web API calls: playlists, albums, transfer, play
-  player/useSpotifyPlayer.ts   Web Playback SDK wrapped as a React hook
-  player/usePosition.ts  rAF clock so the tonearm moves between SDK events
-  hooks/                 Fullscreen, wake lock, idle hide, album colour
-  components/            Turntable, VuMeter, NowPlaying, Transport, Crate, icons
-  assets/walnut.svg      Generated wood grain for the plinth
+  spotify/auth.ts        PKCE login, token refresh, bring-your-own Client ID (no backend, no secret)
+  spotify/api.ts         Typed Web API calls: library, playback, queue, jukebox strips
+  player/                Web Playback SDK as a hook, position clock, jukebox strip list
+  hooks/                 Fullscreen, wake lock, idle hide, album colour, theme, attract mode
+  components/            Turntable, Jukebox, VuMeter, NowPlaying, Transport, Crate, Setup, icons
+  lib/                   Logger, small pure helpers (+ their tests)
   App.tsx                Wires it together; keyboard shortcuts live here
+scripts/                 Windows launcher (npm run app), start-up shortcut, icon generator
+.github/                 CI for PRs, Pages deploy, Dependabot
 ```
+
+## Development
+
+```
+npm run dev     # http://127.0.0.1:4545, hot reload
+npm run lint    # ESLint, including React's hook rules
+npm test        # Vitest unit tests
+npm run build   # type check + production build (adds the Content-Security-Policy)
+npm run check   # all three, as CI runs them
+```
+
+Pull requests run the same checks in CI. Dependencies are pinned to exact versions; Dependabot proposes updates weekly.
 
 ## Notes for the .NET brain
 
