@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { AuthRequiredError, NetworkError, handleCallback, isLoggedIn, login, logout } from './spotify/auth'
+import { AuthRequiredError, NetworkError, getClientId, handleCallback, isCallback, isLoggedIn, login, logout } from './spotify/auth'
 import { addToQueue, playContext, transferPlayback } from './spotify/api'
 import { useSpotifyPlayer } from './player/useSpotifyPlayer'
 import { usePosition } from './player/usePosition'
@@ -18,15 +18,18 @@ import { Transport } from './components/Transport'
 import { Crate } from './components/Crate'
 import { VuMeter } from './components/VuMeter'
 import { Jukebox, PER_PAGE } from './components/Jukebox'
+import { Setup } from './components/Setup'
 
 /**
- * Three screens, one component:
+ * Three screens, one component (plus first-run setup for the Client ID):
  *   1. not logged in      -> "Connect Spotify"
  *   2. logged in, no deck -> "Power on" (needed: browsers require a click before audio)
  *   3. deck running       -> turntable or jukebox (the theme) + crate
  */
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(isLoggedIn())
+  /** Showing the "bring your own Spotify app" form (always, until there's an ID). */
+  const [settingUp, setSettingUp] = useState(() => !getClientId())
   const [powered, setPowered] = useState(false)
   const [crateOpen, setCrateOpen] = useState(false)
   const [theme, toggleTheme] = useTheme()
@@ -79,7 +82,7 @@ export default function App() {
 
   // Finish the PKCE redirect if we landed on /callback.
   useEffect(() => {
-    if (window.location.pathname !== '/callback') return
+    if (!isCallback()) return
     handleCallback()
       .then((ok) => ok && setLoggedIn(true))
       .catch(report)
@@ -217,6 +220,17 @@ export default function App() {
   const heading = strips.name ?? contextName ?? (strips.source === 'context' ? track?.album : null)
     ?? contextLabel(player.state.contextUri)
 
+  if (settingUp) {
+    return (
+      <main className="gate">
+        <Setup
+          onDone={() => { setLoggedIn(false); setNotice(null); setSettingUp(false) }}
+          onCancel={getClientId() ? () => setSettingUp(false) : undefined}
+        />
+      </main>
+    )
+  }
+
   if (!loggedIn || !powered) {
     return (
       <main className="gate">
@@ -226,7 +240,10 @@ export default function App() {
           <p className="tagline">Your Spotify library, on a record player.</p>
           {notice && <p className="gate-notice">{notice}</p>}
           {!loggedIn ? (
-            <button className="primary" onClick={connect}>Connect Spotify</button>
+            <>
+              <button className="primary" onClick={connect}>Connect Spotify</button>
+              <button className="link" onClick={() => setSettingUp(true)}>Use a different Spotify app</button>
+            </>
           ) : (
             <>
               <button className="primary" onClick={powerOn}>Power on</button>

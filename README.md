@@ -4,12 +4,20 @@ A fullscreen virtual turntable for a spare screen. Album art spins as the record
 
 ## Setup
 
-1. Create an app at <https://developer.spotify.com/dashboard>
-   - Redirect URI: `http://127.0.0.1:4545/callback`
-   - APIs: Web API, Web Playback SDK
-2. `cp .env.example .env` and paste your Client ID.
-3. `npm install` then `npm run dev`
-4. Open <http://127.0.0.1:4545> (not `localhost`, Spotify rejects it).
+Everyone uses their own Spotify app (free to create). Spotify only lets an app in Development Mode be used by its owner and a few allowlisted people, so one shared app can't serve everybody. Premium is required.
+
+**Hosted:** open <https://thesecretstage.vip/spotifyTurntable/>. On first run it walks you through creating the Spotify app, shows the redirect URI to paste into it, and asks for the Client ID, which stays in your browser. Choose **Install Turntable** from Chrome's menu to use it as an app.
+
+**Local:**
+
+1. `npm install` then `npm run dev`
+2. Open <http://127.0.0.1:4545> (not `localhost`, Spotify rejects it) and follow the setup screen. Its redirect URI is `http://127.0.0.1:4545/`.
+
+Optionally put a Client ID in `.env` (see `.env.example`) to skip the setup screen; a `.env` redirect URI overrides the default too.
+
+## Publishing
+
+`.github/workflows/pages.yml` builds and deploys to GitHub Pages on every push to `main`, without any Client ID. One-off: repo Settings → Pages → Source: **GitHub Actions**. It's served at <https://thesecretstage.vip/spotifyTurntable/> (the custom domain of the owner's GitHub Pages user site, so project repos appear under it by repo name). That exact address, trailing slash included, is the redirect URI people register. Pages needs a public repo (or a paid plan for private ones); Netlify and Cloudflare Pages work too, with `BASE_PATH=/` and `npm run build`.
 
 ## Keys
 
@@ -78,3 +86,7 @@ src/
 - From devtools: `turntableLog.entries()`, `turntableLog.download()`, `turntableLog.clear()`.
 - Uncaught errors and unhandled promise rejections are captured automatically.
 - Nothing is sent anywhere; the log never contains tokens.
+
+## Licence
+
+[MIT](LICENSE). Not affiliated with or endorsed by Spotify.

@@ -14,8 +14,18 @@
 
 import { log } from '../lib/log'
 
-const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID as string
-const REDIRECT_URI = import.meta.env.VITE_SPOTIFY_REDIRECT_URI as string
+const CLIENT_ID_KEY = 'turntable.clientId'
+const ENV_CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID as string | undefined
+
+/**
+ * Where Spotify sends the browser back after login. Defaults to the app's own
+ * root (e.g. https://you.github.io/spotifyTurntable/), because a static host
+ * has no page at /callback; the callback is recognised by its query string
+ * instead. .env can still override it (the original local setup used /callback).
+ */
+export const REDIRECT_URI =
+  (import.meta.env.VITE_SPOTIFY_REDIRECT_URI as string | undefined)
+  || new URL(import.meta.env.BASE_URL, window.location.origin).href
 
 const SCOPES = [
   'streaming',
@@ -27,6 +37,32 @@ const SCOPES = [
   'playlist-read-private',
   'playlist-read-collaborative',
 ].join(' ')
+
+// Each person brings their own Spotify app: in Development Mode an app only
+// works for its owner and a short allowlist, so a shared ID can't scale.
+// Theirs is kept in localStorage; a build-time .env ID is the fallback.
+// A client ID isn't a secret under PKCE, so it's fine for it to sit there.
+
+/** The Spotify app this browser logs in with, or null if none is set up. */
+export function getClientId(): string | null {
+  const saved = localStorage.getItem(CLIENT_ID_KEY)
+  if (saved) return saved
+  return ENV_CLIENT_ID && ENV_CLIENT_ID !== 'your_client_id_here' ? ENV_CLIENT_ID : null
+}
+
+/** Spotify client IDs are 32 hex characters. */
+export const isValidClientId = (id: string) => /^[0-9a-f]{32}$/i.test(id)
+
+export function setClientId(id: string) {
+  localStorage.setItem(CLIENT_ID_KEY, id.trim())
+  logout() // tokens belong to the old app
+}
+
+/** Forget the saved ID (falls back to the .env one, if any). */
+export function clearClientId() {
+  localStorage.removeItem(CLIENT_ID_KEY)
+  logout()
+}
 
 const STORAGE_KEY = 'turntable.tokens'
 const VERIFIER_KEY = 'turntable.verifier'
@@ -79,7 +115,7 @@ async function exchange(body: Record<string, string>): Promise<StoredTokens> {
     res = await fetch('https://accounts.spotify.com/api/token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ client_id: CLIENT_ID, ...body }),
+      body: new URLSearchParams({ client_id: getClientId() ?? '', ...body }),
       signal: AbortSignal.timeout(10_000),
     })
   } catch (e) {
@@ -115,9 +151,8 @@ async function exchange(body: Record<string, string>): Promise<StoredTokens> {
 // ---- public API -----------------------------------------------------------
 
 export async function login(): Promise<void> {
-  if (!CLIENT_ID || CLIENT_ID === 'your_client_id_here') {
-    throw new Error('VITE_SPOTIFY_CLIENT_ID is not set. Copy .env.example to .env.')
-  }
+  const clientId = getClientId()
+  if (!clientId) throw new Error('Set up your Spotify Client ID first.')
   const verifier = randomString(64)
   const challenge = await sha256Base64Url(verifier)
   // `state` is echoed back by Spotify; we check it to block forged callbacks (CSRF).
@@ -126,7 +161,7 @@ export async function login(): Promise<void> {
   localStorage.setItem(STATE_KEY, state)
 
   const params = new URLSearchParams({
-    client_id: CLIENT_ID,
+    client_id: clientId,
     response_type: 'code',
     redirect_uri: REDIRECT_URI,
     scope: SCOPES,
@@ -137,8 +172,14 @@ export async function login(): Promise<void> {
   window.location.href = `https://accounts.spotify.com/authorize?${params}`
 }
 
+/** True if this page load is Spotify sending us back from login. */
+export function isCallback(): boolean {
+  const params = new URLSearchParams(window.location.search)
+  return params.has('state') && (params.has('code') || params.has('error'))
+}
+
 /**
- * Call once on /callback. Returns true if login completed.
+ * Call once when isCallback(). Returns true if login completed.
  * Throws with a readable message if Spotify sent an error or the state mismatches.
  */
 export async function handleCallback(): Promise<boolean> {
@@ -148,7 +189,7 @@ export async function handleCallback(): Promise<boolean> {
   localStorage.removeItem(VERIFIER_KEY)
   localStorage.removeItem(STATE_KEY)
   // Clean the URL first so a refresh never replays the code.
-  window.history.replaceState({}, '', '/')
+  window.history.replaceState({}, '', import.meta.env.BASE_URL)
 
   const error = params.get('error')
   if (error) log.warn('auth', 'callback returned error', { error })

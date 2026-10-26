@@ -7,8 +7,9 @@ Owner is a senior .NET developer learning React/TS. When explaining changes, pre
 ## Stack and constraints
 
 - React 18 + Vite + TypeScript, strict mode, no state library, no CSS framework, no router. Keep it that way; the app is ~1,000 lines and should stay readable in one sitting.
-- Auth is PKCE, fully client-side, no backend. Redirect URI must be `http://127.0.0.1:4545/callback` (Spotify rejects `localhost`).
-- Client ID lives in `.env` as `VITE_SPOTIFY_CLIENT_ID` (gitignored). Never commit it.
+- Auth is PKCE, fully client-side, no backend. Redirect URI defaults to the app's own root URL (e.g. `http://127.0.0.1:4545/`, or the Pages URL); the callback is detected by `?code`/`?error` + `state`, not by path, because static hosts 404 on `/callback`. `VITE_SPOTIFY_REDIRECT_URI` overrides it (the owner's local setup still uses `/callback`). Spotify rejects `localhost`; use 127.0.0.1.
+- Bring your own Client ID: Dev Mode apps only work for their owner plus a small allowlist, and Extended Quota is business-only, so each user creates their own Spotify app. First run shows `Setup` and stores the ID in localStorage (`turntable.clientId`); `.env`'s `VITE_SPOTIFY_CLIENT_ID` is the fallback. Never commit `.env`, and never set a Client ID in the Pages build.
+- `vite.config.ts` reads `BASE_PATH` (the Pages workflow sets `/<repo>/`); keep asset and manifest URLs relative or base-aware.
 - Web Playback SDK is loaded via `<script>` in `index.html` and exposes `window.Spotify`; types from `@types/spotify-web-playback-sdk`.
 - Pin dependency versions. Spotify's API has removed endpoints with little notice, so treat it as the one external thing that can change underneath us.
 
@@ -23,13 +24,14 @@ src/player/useSpotifyPlayer.ts SDK lifecycle as a hook; returns status, deviceId
 src/player/usePosition.ts      rAF clock extrapolating position between SDK events
 src/player/useContextTracks.ts jukebox strip list: whole album/playlist, else the queue
 src/hooks/                     useFullscreen, useWakeLock, useIdle, useOnline, useAlbumColour (background + neon), useTheme, useAttract
-src/components/                Turntable, VuMeter, NowPlaying (track info + progress), Transport (buttons/volume), Jukebox (whole jukebox theme), Crate, ErrorBoundary, icons (inline SVG)
+src/components/                Setup (first-run Client ID), Turntable, VuMeter, NowPlaying (track info + progress), Transport (buttons/volume), Jukebox (whole jukebox theme), Crate, ErrorBoundary, icons (inline SVG)
 src/assets/walnut.svg          generated wood grain (SVG noise filters) for the plinth
 src/styles.css                 all styling; deck internals in cqw
 src/App.tsx                    wiring, keyboard shortcuts, single report() for errors
 public/                        web app manifest + icons (icons drawn by scripts/make-icons.py, needs Pillow)
 scripts/turntable.ps1          desktop launcher: ensures `vite preview` is up on 4545, opens a Chrome --app window
 scripts/startup.ps1            adds/removes a Startup-folder shortcut to the launcher
+.github/workflows/pages.yml    builds with BASE_PATH=/<repo>/ and deploys to GitHub Pages on push to main
 ```
 
 ## Decisions already made (don't relitigate without reason)
