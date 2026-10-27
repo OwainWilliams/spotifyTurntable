@@ -84,6 +84,8 @@ npm run check   # all three, as CI runs them
 
 Pull requests run the same checks in CI. Dependencies are pinned to exact versions; Dependabot proposes updates weekly.
 
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md) for setup, checks and ground rules.
+
 ## Notes for the .NET brain
 
 - `useState` = a field whose change re-renders the component.
