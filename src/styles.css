@@ -121,6 +121,10 @@ button:disabled { cursor: default; }
 .stage {
   height: 100%;
   position: relative;
+  /* Column: the machine's scene takes the space, .repo-link is a footer row
+     under it. In the flow rather than floating, so it can't cover controls. */
+  display: flex;
+  flex-direction: column;
   /* clip, not hidden: hidden can still be scrolled by focus() or anchor
      jumps, which would slide the whole display sideways. */
   overflow: clip;
@@ -178,13 +182,20 @@ button:disabled { cursor: default; }
 .scene {
   --info: clamp(18rem, 28vw, 30rem);
   --gap: clamp(2rem, 5vw, 6rem);
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   display: grid;
   grid-template-columns: auto var(--info);
   column-gap: var(--gap);
   align-items: center;
+  /* "safe": centre when it fits, otherwise start at the top, so on a phone
+     the overflow scrolls instead of being cut off above and below. */
+  align-content: safe center;
   justify-content: center;
   padding: 4vh 4vw;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
 /* Burn-in protection, on whichever machine is showing: wander +/-1vmin so
@@ -198,10 +209,10 @@ button:disabled { cursor: default; }
     drift-x 1380s ease-in-out infinite alternate, /* 23 min */
     drift-y 1020s ease-in-out infinite alternate; /* 17 min */
 }
-.deck { width: min(calc(88vh * 100 / 76), calc(92vw - var(--info) - var(--gap))); }
+.deck { width: min(calc((88vh - var(--credit-h)) * 100 / 76), calc(92vw - var(--info) - var(--gap))); }
 
 @media (max-aspect-ratio: 5/4) {
-  .scene { grid-template-columns: auto; row-gap: 4vh; align-content: center; }
+  .scene { grid-template-columns: auto; row-gap: 4vh; }
   .deck { width: min(92vw, calc(56vh * 100 / 76)); }
   .info { width: min(92vw, calc(56vh * 100 / 76)); }
 }
@@ -585,24 +596,29 @@ button:disabled { cursor: default; }
 }
 .stage.idle .transport { opacity: 0; pointer-events: none; }
 
-/* Bottom-centre credit, below the plinth / cabinet in both themes. Above the
-   machine (z 4) so it stays clickable, under banners, scrim and crate.
-   --credit-h is the strip it needs; the jukebox reserves it. */
+/* Bottom-centre credit: a footer row under the machine in both themes. z 4
+   keeps it clickable if the drift nudges the scene over it; banners, scrim
+   and crate stay above it.
+   --credit-h is the height of its row; the machines subtract it when sizing
+   themselves to the viewport height. */
 :root { --credit-h: 2.25rem; }
 .repo-link {
-  position: absolute;
-  bottom: 0.6rem; left: 50%;
-  transform: translateX(-50%);
+  flex: none;
+  align-self: center;
   z-index: 4;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
+  max-width: calc(100% - 2rem);
+  margin: 0.15rem 1rem 0.6rem;
   padding: 0.25rem 0.75rem;
   border-radius: 999px;
   font-size: 0.78rem;
+  line-height: 1.2;
+  text-align: center;
   color: var(--ink-3);
   text-decoration: none;
-  white-space: nowrap;
   transition: opacity 0.6s, color 0.2s, background 0.2s;
 }
 .repo-link:hover { color: var(--ink); background: rgba(255, 255, 255, 0.07); }
@@ -772,12 +788,10 @@ button:disabled { cursor: default; }
  * 1cqw is roughly 15px on a 1080p screen.
  */
 .jukebox-scene {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   display: grid;
   place-items: center;
-  /* Keep a strip under the cabinet for .repo-link: the cabinet fills the
-     height, and drift would otherwise push it onto the link on short screens. */
-  padding-bottom: var(--credit-h);
 }
 
 /* The lights take their colour from the album art (set inline from

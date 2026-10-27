@@ -77,7 +77,8 @@ docs/                          README screenshots
 - `.stage` is `overflow: clip`, not `hidden`, and the crate focuses its search with `preventScroll`: hidden containers can still be scrolled by focus(), which slid the whole display sideways when the crate opened.
 - The App keyboard listener subscribes once and reads `player` through a ref. Re-subscribing per render dropped the first key after idle (React swapped the listener mid-dispatch).
 - Fonts are bundled (`@fontsource`, pinned) so kiosk mode renders correctly offline: Instrument Serif for titles, Inter for UI, Monoton (neon marquee) and Courier Prime (title strips) for the jukebox.
-- `RepoLink` (bottom-centre "contributions welcome on GitHub" line) is rendered once in App for both themes, fades when idle, and opens in a new tab: navigating the player window away would unload the page and kill the Spotify device. The jukebox reserves `--credit-h` under its cabinet for it; the turntable already has room.
+- `RepoLink` (bottom-centre "contributions welcome on GitHub" line) is rendered once in App for both themes, fades when idle, and opens in a new tab: navigating the player window away would unload the page and kill the Spotify device. It's a footer row in the flow (`.stage` is a flex column), never absolutely positioned: floating, it covered the controls on phones. Both machines subtract `--credit-h` (its row height) when sizing to the viewport height, so desktop screens fit without scrolling.
+- On short screens (phones) the turntable's `.scene` scrolls vertically, with `align-content: safe center` so it centres when it fits and starts at the top when it doesn't (plain `center` cut the top off, unreachably).
 - The Log button was removed from the UI; L still downloads the log, and the crash screen still offers it.
 - Album art is square; the circular label crop clips corners. Acceptable for now.
 
