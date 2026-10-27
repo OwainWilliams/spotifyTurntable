@@ -15,6 +15,7 @@ import { log } from './lib/log'
 import { Turntable } from './components/Turntable'
 import { NowPlaying } from './components/NowPlaying'
 import { Transport } from './components/Transport'
+import { RepoLink } from './components/RepoLink'
 import { Crate } from './components/Crate'
 import { VuMeter } from './components/VuMeter'
 import { Jukebox, PER_PAGE } from './components/Jukebox'
@@ -329,6 +330,8 @@ export default function App() {
           </aside>
         </div>
       )}
+
+      <RepoLink />
 
       {/* Dims the deck behind the crate; clicking it closes the crate. */}
       {crateOpen && <div className="scrim" onClick={() => setCrateOpen(false)} />}

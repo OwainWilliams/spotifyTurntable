@@ -584,6 +584,29 @@ button:disabled { cursor: default; }
   transition: opacity 0.6s;
 }
 .stage.idle .transport { opacity: 0; pointer-events: none; }
+
+/* Bottom-centre credit, below the plinth / cabinet in both themes. Above the
+   machine (z 4) so it stays clickable, under banners, scrim and crate.
+   --credit-h is the strip it needs; the jukebox reserves it. */
+:root { --credit-h: 2.25rem; }
+.repo-link {
+  position: absolute;
+  bottom: 0.6rem; left: 50%;
+  transform: translateX(-50%);
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  color: var(--ink-3);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: opacity 0.6s, color 0.2s, background 0.2s;
+}
+.repo-link:hover { color: var(--ink); background: rgba(255, 255, 255, 0.07); }
+.stage.idle .repo-link { opacity: 0; pointer-events: none; }
 .transport .buttons { display: flex; align-items: center; gap: 1rem; }
 .icon-btn, .play-btn, .text-btn {
   display: inline-flex;
@@ -748,7 +771,14 @@ button:disabled { cursor: default; }
  * (.jukebox is the container), at a fixed 16:9 so it scales as one piece.
  * 1cqw is roughly 15px on a 1080p screen.
  */
-.jukebox-scene { height: 100%; display: grid; place-items: center; }
+.jukebox-scene {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  /* Keep a strip under the cabinet for .repo-link: the cabinet fills the
+     height, and drift would otherwise push it onto the link on short screens. */
+  padding-bottom: var(--credit-h);
+}
 
 /* The lights take their colour from the album art (set inline from
    useAlbumColour). Registered as a <color> so it can fade between records;
@@ -763,7 +793,7 @@ button:disabled { cursor: default; }
   --type: #2a1d14;
   --typewriter: 'Courier Prime', 'Courier New', monospace;
   container-type: inline-size;
-  width: min(96vw, calc(94vh * 16 / 9));
+  width: min(96vw, calc((94vh - var(--credit-h)) * 16 / 9));
   aspect-ratio: 16 / 9;
 }
 .cabinet {

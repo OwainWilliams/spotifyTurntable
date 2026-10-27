@@ -27,7 +27,7 @@ src/player/useSpotifyPlayer.ts SDK lifecycle as a hook; returns status, deviceId
 src/player/usePosition.ts      rAF clock extrapolating position between SDK events
 src/player/useContextTracks.ts jukebox strip list: whole album/playlist, else the queue
 src/hooks/                     useFullscreen, useWakeLock, useIdle, useOnline, useAlbumColour (background + neon), useTheme, useAttract
-src/components/                Setup (first-run Client ID), Turntable, VuMeter, NowPlaying (track info + progress), Transport (buttons/volume), Jukebox (whole jukebox theme), Crate, ErrorBoundary, icons (inline SVG)
+src/components/                Setup (first-run Client ID), RepoLink (GitHub credit line), Turntable, VuMeter, NowPlaying (track info + progress), Transport (buttons/volume), Jukebox (whole jukebox theme), Crate, ErrorBoundary, icons (inline SVG)
 src/assets/walnut.svg          generated wood grain (SVG noise filters) for the plinth
 src/styles.css                 all styling; deck internals in cqw
 src/App.tsx                    wiring, keyboard shortcuts, single report() for errors
@@ -77,6 +77,7 @@ docs/                          README screenshots
 - `.stage` is `overflow: clip`, not `hidden`, and the crate focuses its search with `preventScroll`: hidden containers can still be scrolled by focus(), which slid the whole display sideways when the crate opened.
 - The App keyboard listener subscribes once and reads `player` through a ref. Re-subscribing per render dropped the first key after idle (React swapped the listener mid-dispatch).
 - Fonts are bundled (`@fontsource`, pinned) so kiosk mode renders correctly offline: Instrument Serif for titles, Inter for UI, Monoton (neon marquee) and Courier Prime (title strips) for the jukebox.
+- `RepoLink` (bottom-centre "contributions welcome on GitHub" line) is rendered once in App for both themes, fades when idle, and opens in a new tab: navigating the player window away would unload the page and kill the Spotify device. The jukebox reserves `--credit-h` under its cabinet for it; the turntable already has room.
 - The Log button was removed from the UI; L still downloads the log, and the crash screen still offers it.
 - Album art is square; the circular label crop clips corners. Acceptable for now.
 
