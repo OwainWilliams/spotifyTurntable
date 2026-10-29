@@ -10,6 +10,10 @@ A fullscreen record player for a spare screen. Album art spins as the record lab
 
 ![The CD theme: a silver hi-fi deck with the album art printed on the spinning disc, and a teal dot-matrix display showing track, time, title, track calendar and level meter](docs/cd.jpg)
 
+![The cassette theme: a black tape deck with the album art as the cassette label, piano keys with no skip buttons, a tape counter and a level meter](docs/cassette.jpg)
+
+![The Winamp theme: a green LCD main window with spectrum analyser and scrolling title, a playlist editor, and the album art in its own window](docs/winamp.jpg)
+
 ## Setup
 
 Everyone uses their own Spotify app (free to create). Spotify only lets an app in Development Mode be used by its owner and a few allowlisted people, so one shared app can't serve everybody. Premium is required.
