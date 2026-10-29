@@ -2,13 +2,14 @@
 // Run with `npm test`. .NET analogy: an xUnit project, with describe/it as
 // the test class and [Fact]s, and expect() as Assert.
 import { describe, expect, it } from 'vitest'
-import { clock } from './clock'
+import { clock, lcd, longClock } from './clock'
 import { contextLabel } from './contextLabel'
 import { codeFor, PER_PAGE } from '../components/Jukebox'
 import { hueOf } from '../hooks/useAlbumColour'
 import { tempoFor } from '../components/VuMeter'
 import { calendarWindow } from '../components/CdPlayer'
 import { nextTheme, parseTheme } from '../hooks/useTheme'
+import { locate, odometer } from './tape'
 
 describe('codeFor (jukebox strip codes)', () => {
   it('runs down each column, then across', () => {
@@ -55,6 +56,18 @@ describe('clock', () => {
   })
 })
 
+describe('longClock / lcd', () => {
+  it('adds hours only past an hour', () => {
+    expect(longClock(213_000)).toBe('3:33')
+    expect(longClock(3_723_000)).toBe('1:02:03')
+  })
+  it('pads the minutes to two digits, and caps at 99:59', () => {
+    expect(lcd(213_000)).toBe('03:33')
+    expect(lcd(-1)).toBe('00:00')
+    expect(lcd(10_000_000)).toBe('99:59')
+  })
+})
+
 describe('contextLabel', () => {
   it.each([
     ['spotify:playlist:abc', 'Playlist'],
@@ -78,16 +91,20 @@ describe('tempoFor (simulated VU tempo)', () => {
 })
 
 describe('nextTheme / parseTheme', () => {
-  it('cycles turntable -> jukebox -> cd and back round', () => {
+  it('cycles turntable -> jukebox -> cd -> cassette -> winamp and back round', () => {
     expect(nextTheme('turntable')).toBe('jukebox')
     expect(nextTheme('jukebox')).toBe('cd')
-    expect(nextTheme('cd')).toBe('turntable')
+    expect(nextTheme('cd')).toBe('cassette')
+    expect(nextTheme('cassette')).toBe('winamp')
+    expect(nextTheme('winamp')).toBe('turntable')
   })
   it('reads back a stored theme, and treats anything else as the turntable', () => {
     expect(parseTheme('cd')).toBe('cd')
+    expect(parseTheme('cassette')).toBe('cassette')
+    expect(parseTheme('winamp')).toBe('winamp')
     expect(parseTheme('jukebox')).toBe('jukebox')
     expect(parseTheme(null)).toBe('turntable')
-    expect(parseTheme('cassette')).toBe('turntable')
+    expect(parseTheme('reel-to-reel')).toBe('turntable')
   })
 })
 
@@ -102,5 +119,35 @@ describe('calendarWindow (CD track calendar)', () => {
   it('shows the first block when nothing in the list is playing', () => {
     expect(calendarWindow(-1, 12)).toEqual({ first: 0, shown: 12, over: false })
     expect(calendarWindow(-1, 0)).toEqual({ first: 0, shown: 0, over: false })
+  })
+})
+
+describe('locate (cassette winding across songs)', () => {
+  const tape = [180_000, 240_000, 200_000]
+  it('finds the song and the place in it', () => {
+    expect(locate(tape, 90_000)).toEqual({ index: 0, positionMs: 90_000 })
+    expect(locate(tape, 180_000)).toEqual({ index: 1, positionMs: 0 })
+    expect(locate(tape, 500_000)).toEqual({ index: 2, positionMs: 80_000 })
+  })
+  it('stops at the ends of the tape', () => {
+    expect(locate(tape, -5_000)).toEqual({ index: 0, positionMs: 0 })
+    expect(locate(tape, 999_000)).toEqual({ index: 2, positionMs: 199_000 })
+  })
+  it('has nowhere to go on an empty tape', () => {
+    expect(locate([], 1_000)).toEqual({ index: -1, positionMs: 0 })
+  })
+})
+
+describe('odometer (cassette tape counter)', () => {
+  it('turns the ones drum smoothly and leaves the others still', () => {
+    expect(odometer(125.5)).toEqual([1, 2, 5.5])
+  })
+  it('carries into the next drum only as the ones go from 9 to 0', () => {
+    expect(odometer(129.5)).toEqual([1, 2.5, 9.5])
+    expect(odometer(199.25)).toEqual([1.25, 9.25, 9.25])
+  })
+  it('wraps round past 999, and below 000 when rewound past zero', () => {
+    expect(odometer(1003)).toEqual([0, 0, 3])
+    expect(odometer(-1)).toEqual([9, 9, 9])
   })
 })

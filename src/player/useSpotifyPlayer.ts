@@ -32,10 +32,16 @@ export interface PlayerState {
   contextUri: string | null
   contextName: string | null
   paused: boolean
+  shuffle: boolean
+  repeat: Repeat
   /** Position reported by the SDK at `reportedAt`. See usePosition. */
   positionMs: number
   reportedAt: number
 }
+
+/** Spotify's repeat modes, by the names the Web API uses. */
+export type Repeat = 'off' | 'context' | 'track'
+const REPEAT: Repeat[] = ['off', 'context', 'track']
 
 export type PlayerStatus = 'loading' | 'ready' | 'error'
 
@@ -86,6 +92,8 @@ export function useSpotifyPlayer(enabled: boolean) {
     contextUri: null,
     contextName: null,
     paused: true,
+    shuffle: false,
+    repeat: 'off',
     positionMs: 0,
     reportedAt: Date.now(),
   }))
@@ -198,6 +206,8 @@ export function useSpotifyPlayer(enabled: boolean) {
           contextUri: s.context?.uri || null,
           contextName: s.context?.metadata?.name || null,
           paused: s.paused,
+          shuffle: s.shuffle,
+          repeat: REPEAT[s.repeat_mode] ?? 'off',
           positionMs: s.position,
           reportedAt: Date.now(),
         })
@@ -241,6 +251,7 @@ export function useSpotifyPlayer(enabled: boolean) {
     state,
     togglePlay: () => playerRef.current?.togglePlay(),
     pause: () => playerRef.current?.pause(),
+    resume: () => playerRef.current?.resume(),
     next: () => playerRef.current?.nextTrack(),
     previous: () => playerRef.current?.previousTrack(),
     seek: (ms: number) => playerRef.current?.seek(ms),

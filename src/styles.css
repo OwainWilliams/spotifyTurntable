@@ -1510,9 +1510,613 @@ button.cal-num:hover { color: #e9fffa; }
 .alu-btn[aria-pressed='true'] .key-dot { background: #ffb15c; box-shadow: 0 0 0.4cqw #ff9a3c, 0 0 0.9cqw rgba(255, 154, 60, 0.6); }
 .fascia-level input { width: 9cqw; height: 2.6cqw; margin: 0; accent-color: var(--print); cursor: pointer; }
 
+/* ---- Cassette deck ------------------------------------------------------- */
+/*
+ * The fourth theme: an 80s black tape deck. Drawn in cqw (.tape-deck is the
+ * container), 100:48; the width calc uses 50 to leave room for the feet. The
+ * cassette itself is SVG in its own 100 x 63.5 units (Cassette.tsx), with the
+ * label's typed text overlaid in HTML; .cassette is a container too, so in
+ * there 1cqw is one cassette unit.
+ */
+.tape-scene {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+.tape-deck {
+  container-type: inline-size;
+  width: min(94vw, calc((90vh - var(--credit-h)) * 100 / 50));
+  aspect-ratio: 100 / 48;
+}
+
+/* Black anodised front with faint brushed hairlines (pitch >= 0.4cqw) and a
+   silver trim along the top. */
+.tape-body {
+  position: relative;
+  height: 100%;
+  padding: 2.2cqw 3cqw 2.6cqw;
+  display: flex;
+  flex-direction: column;
+  gap: 1.8cqw;
+  border-radius: 1.2cqw;
+  color: #c9ccd2;
+  background:
+    linear-gradient(180deg, #d9dbdf 0 0.5cqw, #8f9298 0.5cqw 0.65cqw, transparent 0.65cqw),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 20%, transparent 85%, rgba(0, 0, 0, 0.3)),
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0 0.2cqw, transparent 0.2cqw 0.4cqw),
+    linear-gradient(90deg, #17181a, #26272a 30%, #1d1e20 55%, #2a2b2e 75%, #161719);
+  box-shadow:
+    inset 0 -0.25cqw 0 rgba(0, 0, 0, 0.5),
+    inset 0 0 0 0.1cqw rgba(255, 255, 255, 0.06),
+    0 1.6cqw 3.5cqw rgba(0, 0, 0, 0.6);
+}
+.tape-body::before, .tape-body::after {
+  content: '';
+  position: absolute;
+  bottom: -1.3cqw;
+  width: 9cqw; height: 1.6cqw;
+  border-radius: 0 0 0.6cqw 0.6cqw;
+  background: linear-gradient(180deg, #26272a, #0f1012);
+  z-index: -1;
+}
+.tape-body::before { left: 7cqw; }
+.tape-body::after { right: 7cqw; }
+
+.tape-top {
+  flex: none;
+  height: 2.6cqw;
+  margin-top: 0.4cqw;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tape-legend { font: 600 0.75cqw var(--sans); letter-spacing: 0.35em; text-transform: uppercase; }
+.tape-deck .wordmark small, .tape-deck .power, .tape-deck .legend { color: #9a9ea6; }
+
+.tape-main { flex: 1; min-height: 0; display: flex; gap: 3cqw; }
+.tape-left { flex: none; width: 50cqw; display: flex; flex-direction: column; gap: 1.6cqw; }
+.tape-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1.4cqw; }
+
+/* Recessed: the cassette well and the two display panels. */
+.tape-door, .tape-panel {
+  box-shadow:
+    inset 0 0 0 0.25cqw #3a3c40,
+    inset 0 0 0 0.4cqw rgba(0, 0, 0, 0.7),
+    inset 0 0.7cqw 1.8cqw rgba(0, 0, 0, 0.9),
+    0 0.12cqw 0 rgba(255, 255, 255, 0.08);
+}
+
+/* ---- Cassette deck: door and cassette ---- */
+.tape-door {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 1cqw;
+  background: radial-gradient(ellipse 70% 70% at 50% 45%, #1f2023, #08090a 80%);
+}
+.cassette {
+  position: relative;
+  container-type: inline-size;
+  width: 44cqw;
+  aspect-ratio: 100 / 63.5;
+  filter: drop-shadow(0 0.5cqw 0.8cqw rgba(0, 0, 0, 0.7));
+}
+.cassette svg { display: block; width: 100%; height: 100%; }
+.cassette .shell { fill: #2b2c30; }
+.cassette .shell-edge { fill: #35363a; stroke: rgba(255, 255, 255, 0.06); stroke-width: 0.3; }
+.cassette .screw { fill: #8d9096; stroke: #3d3f43; stroke-width: 0.35; }
+.cassette .window-rim { fill: rgba(30, 32, 36, 0.25); stroke: rgba(0, 0, 0, 0.55); stroke-width: 0.5; }
+.cassette .label-art { animation: fade-in 0.6s ease-out; }
+/* Reels at FF/REW speed: too fast to make out the spokes, as in life. */
+.cassette.winding .hub { filter: blur(0.25px); }
+
+/* The typed part of the label, over the cream strip at the top of the SVG
+   label (x 5-95, y 3.5-15). */
+.label-strip {
+  position: absolute;
+  left: 6.5cqw; right: 6.5cqw; top: 4.4cqw;
+  height: 9.8cqw;
+  display: flex;
+  align-items: center;
+  gap: 2.4cqw;
+  color: #2a2620;
+  font-family: 'Courier Prime', monospace;
+  /* Ruled lines, as on a blank label. */
+  background: repeating-linear-gradient(180deg, transparent 0 3.1cqw, rgba(60, 90, 150, 0.22) 3.1cqw 3.3cqw);
+}
+.label-side {
+  flex: none;
+  width: 6.4cqw; height: 6.4cqw;
+  display: grid;
+  place-items: center;
+  border: 0.4cqw solid #2a2620;
+  border-radius: 0.8cqw;
+  font: 700 5cqw/1 var(--sans);
+}
+.label-text { min-width: 0; display: flex; flex-direction: column; gap: 0.6cqw; }
+.label-text b, .label-text span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.label-text b { font-size: 4.2cqw; line-height: 1.1; }
+.label-text span { font-size: 2.8cqw; opacity: 0.75; }
+
+.door-empty {
+  font: 600 1cqw var(--sans);
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.25);
+}
+/* Smoked acrylic over the well, with a fixed reflection. */
+.door-sheen {
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, 0.12), transparent 28%, transparent 74%, rgba(255, 255, 255, 0.04)),
+    rgba(14, 16, 20, 0.22);
+}
+
+/* ---- Cassette deck: piano keys ---- */
+.tape-keys { flex: none; display: flex; gap: 0.8cqw; }
+.piano-key {
+  flex: 1;
+  height: 4.6cqw;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35cqw;
+  padding: 0;
+  border: 0;
+  border-radius: 0.3cqw 0.3cqw 0.6cqw 0.6cqw;
+  color: #26272b;
+  background: linear-gradient(180deg, #f1f2f4, #c7cacf 50%, #a4a7ad);
+  box-shadow:
+    inset 0 0.1cqw 0 #fff,
+    inset 0 -0.35cqw 0 rgba(0, 0, 0, 0.28),
+    0 0.45cqw 0 #55585e,
+    0 0.6cqw 0.8cqw rgba(0, 0, 0, 0.6);
+  transition: transform 0.08s, box-shadow 0.08s, background 0.2s;
+  touch-action: none;  /* holding FF on a touch screen must not scroll */
+  user-select: none;
+}
+.piano-key svg { width: 1.5cqw; height: 1.5cqw; fill: currentColor; stroke: none; }
+.piano-key span { font: 700 0.7cqw var(--sans); letter-spacing: 0.16em; text-transform: uppercase; }
+/* Latched (or held) keys sit lower, so less of their front shows. */
+.piano-key.down, .piano-key:active:not(:disabled) {
+  transform: translateY(0.35cqw);
+  background: linear-gradient(180deg, #d9dbdf, #b1b4ba 50%, #93969c);
+  box-shadow:
+    inset 0 0.1cqw 0 rgba(255, 255, 255, 0.6),
+    inset 0 -0.2cqw 0 rgba(0, 0, 0, 0.3),
+    0 0.1cqw 0 #55585e,
+    0 0.2cqw 0.4cqw rgba(0, 0, 0, 0.6);
+}
+.piano-key:disabled { opacity: 0.55; }
+
+/* ---- Cassette deck: counter, lamps, meter ---- */
+.tape-panel {
+  position: relative;
+  border-radius: 0.8cqw;
+  background: linear-gradient(180deg, #050506, #101113);
+  padding: 1.4cqw 1.8cqw;
+}
+.counter-panel { display: flex; align-items: center; justify-content: space-between; gap: 2cqw; }
+.counter-block { display: flex; align-items: center; gap: 1.4cqw; }
+/* Three number wheels behind a slot. Each strip is 0-9 then 0 again, moved
+   up by --d digits (set from JS), so it rolls rather than flicks. */
+.counter {
+  display: flex;
+  gap: 0.15cqw;
+  padding: 0.3cqw;
+  border-radius: 0.3cqw;
+  background: #2b2c30;
+  box-shadow: inset 0 0.15cqw 0.3cqw rgba(0, 0, 0, 0.8);
+}
+.drum {
+  --d: 0;
+  height: 1em;
+  width: 0.75em;
+  overflow: hidden;
+  font: 700 3cqw/1 'Courier Prime', monospace;
+  color: #f2f0ea;
+  text-align: center;
+  background: linear-gradient(180deg, #000, #232427 30%, #232427 70%, #000);
+}
+.drum-strip { display: flex; flex-direction: column; transform: translateY(calc(var(--d) * -1em)); }
+.drum-strip span { height: 1em; }
+.counter-reset { display: flex; flex-direction: column; align-items: center; gap: 0.4cqw; }
+.tape-btn {
+  width: 1.8cqw; height: 1.8cqw;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #f1f2f4, #a4a7ad);
+  box-shadow: 0 0.12cqw 0.25cqw rgba(0, 0, 0, 0.6);
+}
+.tape-btn:active { transform: translateY(0.08cqw); }
+
+.lamps { display: grid; grid-template-columns: repeat(2, auto); gap: 0.6cqw 1.6cqw; }
+.lamp {
+  display: flex;
+  align-items: center;
+  gap: 0.6cqw;
+  font: 600 0.75cqw var(--sans);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #6f737a;
+}
+.lamp i {
+  width: 0.65cqw; height: 0.65cqw;
+  border-radius: 50%;
+  background: #3a2a1c;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.lamp.green i { background: #1d3524; }
+.lamp.on { color: #c9ccd2; }
+.lamp.on.green i { background: #5cf08a; box-shadow: 0 0 0.5cqw #4be07a, 0 0 1cqw rgba(75, 224, 122, 0.6); }
+.lamp.on.amber i { background: #ffb15c; box-shadow: 0 0 0.5cqw #ff9a3c, 0 0 1cqw rgba(255, 154, 60, 0.6); }
+
+/* The shared VU meter as a horizontal peak meter, with a dB scale below. */
+.meter-panel { flex: none; display: flex; flex-direction: column; justify-content: center; gap: 0.8cqw; padding-block: 2cqw; }
+.tape-panel .vu { position: static; display: grid; gap: 0.7cqw; padding: 0; background: none; box-shadow: none; }
+.tape-panel .vu::after { content: none; }
+.tape-panel .vu-channel { flex-direction: row-reverse; justify-content: flex-end; gap: 0.8cqw; }
+.tape-panel .vu-channel small { width: 1cqw; font-size: 0.8cqw; }
+.tape-panel .vu-bars { flex: 1; flex-direction: row; gap: 0.35cqw; }
+.tape-panel .vu-seg { flex: 1; width: auto; height: 1.6cqw; border-radius: 0.1cqw; box-shadow: 0 0 0.5cqw var(--seg); }
+.meter-scale {
+  display: flex;
+  justify-content: space-between;
+  padding-left: 1.8cqw;
+  font: 600 0.7cqw var(--sans);
+  color: #6f737a;
+}
+
+/* Printed on the front, in the space above the controls. */
+.tape-spec {
+  flex: 1;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font: 600 0.7cqw var(--sans);
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: #6f737a;
+}
+
+.tape-controls { flex: none; display: flex; align-items: flex-start; justify-content: flex-end; gap: 1.2cqw; }
+.tape-deck .fascia-level input { accent-color: #c9ccd2; }
+.tape-deck .alu-btn { color: #26272b; }
+
+/* ---- Winamp -------------------------------------------------------------- */
+/*
+ * The fifth theme: a late-90s desktop MP3 player, as three docked windows.
+ * Laid out in the original skin's pixels: --px is one of them, 623 across
+ * (main window and playlist 275 wide, album art 348 square). .amp is the
+ * container, so --px (in cqw) resolves against it wherever it's used inside;
+ * at() in Winamp.tsx positions the main window's parts in --px.
+ */
+.amp-scene {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+}
+.amp {
+  --px: calc(100cqw / 623);
+  --lcd: #00e000;
+  --lcd-glow: 0 0 calc(2 * var(--px)) rgba(0, 224, 0, 0.55);
+  --pixel: 'Doto', 'Courier Prime', monospace;
+  /* Bevels: light top-left, dark bottom-right, one skin pixel each. */
+  --raised: inset var(--px) var(--px) 0 rgba(255, 255, 255, 0.55), inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 rgba(0, 0, 0, 0.6);
+  --sunken: inset var(--px) var(--px) 0 rgba(0, 0, 0, 0.75), inset calc(-1 * var(--px)) calc(-1 * var(--px)) 0 rgba(255, 255, 255, 0.18);
+  container-type: inline-size;
+  width: min(94vw, calc((90vh - var(--credit-h)) * 623 / 348));
+  aspect-ratio: 623 / 348;
+  display: grid;
+  grid-template-columns: 275fr 348fr;
+  grid-template-rows: 116fr 232fr;
+  filter: drop-shadow(0 1.5vmin 3vmin rgba(0, 0, 0, 0.6));
+}
+
+.amp-win {
+  position: relative;
+  min-height: 0;
+  color: #d8d8e6;
+  background:
+    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.025) 0 var(--px), transparent var(--px) calc(2 * var(--px))),
+    linear-gradient(180deg, #40405c, #2a2a3c 60%, #232332);
+  box-shadow: var(--raised), inset 0 0 0 calc(2 * var(--px)) #1a1a26;
+}
+.amp-main { grid-column: 1; grid-row: 1; }
+.amp-pl { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; }
+.amp-pl.hidden { visibility: hidden; }
+.amp-art { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; }
+
+/* Gold-striped title bar. */
+.amp-title {
+  height: calc(14 * var(--px));
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: calc(4 * var(--px));
+  padding: 0 calc(5 * var(--px));
+  background: linear-gradient(180deg, #2c2c48, #1b1b2c);
+  box-shadow: inset 0 calc(-1 * var(--px)) 0 #0e0e18;
+}
+.amp-grip {
+  flex: 1;
+  min-width: calc(8 * var(--px));
+  height: calc(6 * var(--px));
+  background: repeating-linear-gradient(180deg, #d8c27a 0 var(--px), #5c4f2a var(--px) calc(2 * var(--px)));
+}
+.amp-title-text {
+  max-width: 75%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 900 calc(7 * var(--px)) / 1 var(--pixel);
+  letter-spacing: calc(0.6 * var(--px));
+  text-transform: uppercase;
+  color: #e8e8f4;
+}
+.amp-tbtns { display: flex; gap: calc(2 * var(--px)); }
+.amp-tbtn {
+  width: calc(9 * var(--px));
+  height: calc(9 * var(--px));
+  padding: 0;
+  border: 0;
+  display: grid;
+  place-items: center;
+  color: #22222c;
+  background: linear-gradient(180deg, #d4d4de, #8e8e9c);
+  box-shadow: var(--raised);
+}
+.amp-tbtn svg { width: calc(7 * var(--px)); height: calc(7 * var(--px)); stroke-width: 3; }
+
+/* Clutter bar: O A I D V down the left edge, for the look. */
+.amp-clutter {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  font: 900 calc(6 * var(--px)) / 1 var(--pixel);
+  color: #9a9ab4;
+  background: #1c1c2a;
+  box-shadow: var(--sunken);
+}
+
+/* The LCD: play state, time, visualiser. */
+.amp-lcd { background: #000; box-shadow: var(--sunken); }
+.amp-state { color: var(--lcd); filter: drop-shadow(var(--lcd-glow)); }
+.amp-state .amp-glyph { width: 100%; height: 100%; fill: currentColor; }
+.amp-time {
+  padding: 0 calc(2 * var(--px)) 0 0;
+  border: 0;
+  background: none;
+  text-align: right;
+  font: 900 calc(16 * var(--px)) / 1 var(--pixel);
+  color: var(--lcd);
+  text-shadow: var(--lcd-glow);
+  font-variant-numeric: tabular-nums;
+}
+.amp-minus { margin-right: var(--px); }
+.amp-time.blink { animation: amp-blink 1.2s step-end infinite; }
+@keyframes amp-blink { 50% { opacity: 0; } }
+.amp-vis { padding: 0; border: 0; background: #000; }
+.amp-vis canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+
+/* Song title display, and the small readouts under it. */
+.amp-marquee { overflow: hidden; background: #000; box-shadow: var(--sunken); }
+.amp-scroll {
+  display: flex;
+  width: max-content;
+  padding-left: calc(3 * var(--px));
+  font: 700 calc(7.5 * var(--px)) / calc(13 * var(--px)) var(--pixel);
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--lcd);
+  text-shadow: var(--lcd-glow);
+}
+.amp-scroll.scrolls { animation: amp-marquee calc(var(--chars) * 0.25s) linear infinite; }
+.amp-scroll.scrolls span::after { content: '  ***  '; white-space: pre; }
+@keyframes amp-marquee { to { transform: translateX(-50%); } }
+.amp-box {
+  padding-right: var(--px);
+  text-align: right;
+  font: 700 calc(7 * var(--px)) / calc(10 * var(--px)) var(--pixel);
+  color: var(--lcd);
+  background: #000;
+  box-shadow: var(--sunken);
+}
+.amp-legend { font: 900 calc(6 * var(--px)) / calc(8 * var(--px)) var(--pixel); color: #c8c8dc; }
+.amp-ch { color: #55556a; }
+.amp-ch.lit { color: var(--lcd); text-shadow: var(--lcd-glow); }
+
+/* Sliders. The volume groove goes from green to red as it's turned up.
+   Chrome and Firefox each need their own pseudo-elements, and an unknown one
+   drops the whole rule, so they can't share a selector list. */
+.amp-volume, .amp-seek {
+  margin: 0;
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+.amp-volume::-webkit-slider-runnable-track {
+  height: calc(13 * var(--px));
+  background: linear-gradient(90deg, #103a10, color-mix(in srgb, #e43a1c calc(var(--v) * 100%), #2fc81c));
+  box-shadow: var(--sunken);
+}
+.amp-volume::-moz-range-track {
+  height: calc(13 * var(--px));
+  background: linear-gradient(90deg, #103a10, color-mix(in srgb, #e43a1c calc(var(--v) * 100%), #2fc81c));
+  box-shadow: var(--sunken);
+}
+.amp-seek::-webkit-slider-runnable-track { height: calc(10 * var(--px)); background: #15151f; box-shadow: var(--sunken); }
+.amp-seek::-moz-range-track { height: calc(10 * var(--px)); background: #15151f; box-shadow: var(--sunken); }
+.amp-volume::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: calc(14 * var(--px));
+  height: calc(11 * var(--px));
+  margin-top: var(--px);
+  border: 0;
+  background: linear-gradient(180deg, #e4e4ec, #9a9aa8);
+  box-shadow: var(--raised);
+}
+.amp-volume::-moz-range-thumb {
+  width: calc(14 * var(--px));
+  height: calc(11 * var(--px));
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(180deg, #e4e4ec, #9a9aa8);
+  box-shadow: var(--raised);
+}
+.amp-seek::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: calc(29 * var(--px));
+  height: calc(10 * var(--px));
+  border: 0;
+  background: linear-gradient(90deg, transparent 46%, #5a5a6c 46% 54%, transparent 54%), linear-gradient(180deg, #e4e4ec, #9a9aa8);
+  box-shadow: var(--raised);
+}
+.amp-seek::-moz-range-thumb {
+  width: calc(29 * var(--px));
+  height: calc(10 * var(--px));
+  border: 0;
+  border-radius: 0;
+  background: linear-gradient(90deg, transparent 46%, #5a5a6c 46% 54%, transparent 54%), linear-gradient(180deg, #e4e4ec, #9a9aa8);
+  box-shadow: var(--raised);
+}
+/* Nothing loaded: an empty groove, no thumb, as the original. */
+.amp-seek:disabled { cursor: default; }
+.amp-seek:disabled::-webkit-slider-thumb { visibility: hidden; }
+.amp-seek:disabled::-moz-range-thumb { visibility: hidden; }
+.amp-balance { background: linear-gradient(90deg, #2fc81c, #103a10 50%, #2fc81c); box-shadow: var(--sunken); opacity: 0.8; }
+.amp-balance span {
+  position: absolute;
+  left: calc(12 * var(--px));
+  top: var(--px);
+  width: calc(14 * var(--px));
+  height: calc(11 * var(--px));
+  background: linear-gradient(180deg, #e4e4ec, #9a9aa8);
+  box-shadow: var(--raised);
+}
+
+/* Buttons: grey bevelled plastic, pressed in while held. */
+.amp-small, .amp-transport button, .amp-eject {
+  padding: 0;
+  border: 0;
+  color: #22222c;
+  background: linear-gradient(180deg, #d8d8e2, #8c8c9a);
+  box-shadow: var(--raised), 0 0 0 calc(0.5 * var(--px)) #101018;
+}
+.amp-small { font: 900 calc(6 * var(--px)) / 1 var(--pixel); text-transform: uppercase; }
+.amp-small:active:not(:disabled), .amp-transport button:active:not(:disabled), .amp-eject:active,
+.amp-transport button[aria-pressed='true'] {
+  background: linear-gradient(180deg, #8c8c9a, #c4c4d0);
+  box-shadow: var(--sunken), 0 0 0 calc(0.5 * var(--px)) #101018;
+}
+.amp-small:disabled, .amp-transport button:disabled { color: #5a5a66; }
+/* Toggles carry a little lamp, green when on. */
+.amp-toggle { display: flex; align-items: center; justify-content: center; gap: calc(2 * var(--px)); }
+.amp-toggle::before {
+  content: '';
+  flex: none;
+  width: calc(3 * var(--px));
+  height: calc(3 * var(--px));
+  background: #2a3a2a;
+}
+.amp-toggle.on::before { background: #3dff3d; box-shadow: 0 0 calc(2 * var(--px)) #3dff3d; }
+.amp-transport { display: flex; }
+.amp-transport button, .amp-eject { display: grid; place-items: center; }
+.amp-transport button { flex: 1; }
+.amp-transport .amp-glyph, .amp-eject .amp-glyph, .amp-toggle .amp-glyph {
+  width: calc(11 * var(--px));
+  height: calc(8 * var(--px));
+  fill: currentColor;
+}
+.amp-badge { background: radial-gradient(circle closest-side, var(--accent) 0 28%, #111 31% 90%, transparent 94%); }
+
+/* The playlist editor: green on black, white for the playing track, blue for a selected one. */
+.pl-list {
+  position: relative; /* rows' offsetTop, for keeping the playing one in view */
+  flex: 1;
+  min-height: 0;
+  margin: calc(3 * var(--px)) calc(6 * var(--px)) 0;
+  padding: calc(2 * var(--px)) 0;
+  list-style: none;
+  overflow-y: auto;
+  background: #000;
+  box-shadow: var(--sunken);
+  scrollbar-color: #6a6a86 #15151f;
+  font: calc(8.5 * var(--px)) / calc(12 * var(--px)) Arial, Helvetica, var(--sans);
+  color: #00ff00;
+}
+.pl-row {
+  width: 100%;
+  display: flex;
+  gap: calc(4 * var(--px));
+  padding: 0 calc(3 * var(--px));
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: default;
+}
+.pl-row.now { color: #fff; }
+.pl-row.sel { background: #0000c6; }
+.pl-row:focus-visible { outline: var(--px) dotted #fff; outline-offset: calc(-1 * var(--px)); }
+.pl-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pl-len { flex: none; }
+.pl-empty { padding: 0 calc(3 * var(--px)); color: #00a000; }
+.pl-foot {
+  flex: none;
+  height: calc(24 * var(--px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 calc(6 * var(--px));
+}
+.pl-foot .amp-small { width: calc(30 * var(--px)); height: calc(14 * var(--px)); }
+.pl-total {
+  padding: 0 calc(4 * var(--px));
+  font: 700 calc(7 * var(--px)) / calc(12 * var(--px)) var(--pixel);
+  color: var(--lcd);
+  background: #000;
+  box-shadow: var(--sunken);
+}
+
+/* Album art window. */
+.art-frame {
+  flex: 1;
+  min-height: 0;
+  margin: calc(3 * var(--px)) calc(6 * var(--px)) calc(6 * var(--px));
+  display: grid;
+  place-items: center;
+  background: #000;
+  box-shadow: var(--sunken);
+}
+.art-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  animation: fade-in 0.8s var(--ease);
+}
+.art-none { font: 700 calc(8 * var(--px)) var(--pixel); text-transform: uppercase; color: #3a3a4a; }
+
 /* ---- motion preferences -------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {
-  .disc, .single, .single-wrap, .neon-sign, .record-mark, .eyebrow .dot, .cd-disc, .vfd-scroll,
+  .disc, .single, .single-wrap, .neon-sign, .record-mark, .eyebrow .dot, .cd-disc, .vfd-scroll, .cassette .label-art,
+  .amp-scroll, .amp-time.blink, .art-frame img,
   .jukebox.attract .neon-sign, .jukebox.attract .strip { animation: none; }
   .jukebox { transition: none; }
   .vu { display: none; }

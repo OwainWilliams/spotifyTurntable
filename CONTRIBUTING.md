@@ -7,7 +7,7 @@ Thanks for taking a look. Bug reports, ideas and pull requests are all welcome, 
 - **Report a bug** or **suggest an idea**: open an issue. For bugs, the debug log helps a lot (see [Reporting a bug](#reporting-a-bug)).
 - **Fix something small**: typos, styling glitches and clear bugs can go straight to a pull request.
 - **Build something bigger**: please open an issue first so we can agree on the approach before you put time in. Open ideas include:
-  - portrait layouts for the jukebox and CD player (they letterbox today)
+  - portrait layouts for the jukebox, CD player, cassette deck and Winamp (they letterbox today)
   - jukebox lighting that pulses with the (simulated) beat, reusing the VU meter's `--level` trick
 
 ## Getting set up

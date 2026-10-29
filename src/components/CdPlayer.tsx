@@ -229,7 +229,7 @@ interface KeyProps {
 }
 
 /** A small aluminium push button with its legend printed below it. */
-function FasciaKey({ legend, label, title, onClick, disabled, pressed, wide, lit, children }: KeyProps) {
+export function FasciaKey({ legend, label, title, onClick, disabled, pressed, wide, lit, children }: KeyProps) {
   return (
     <span className="fascia-key">
       <button
