@@ -7,6 +7,8 @@ import { contextLabel } from './contextLabel'
 import { codeFor, PER_PAGE } from '../components/Jukebox'
 import { hueOf } from '../hooks/useAlbumColour'
 import { tempoFor } from '../components/VuMeter'
+import { calendarWindow } from '../components/CdPlayer'
+import { nextTheme, parseTheme } from '../hooks/useTheme'
 
 describe('codeFor (jukebox strip codes)', () => {
   it('runs down each column, then across', () => {
@@ -72,5 +74,33 @@ describe('tempoFor (simulated VU tempo)', () => {
       expect(tempoFor(key)).toBeGreaterThanOrEqual(88)
       expect(tempoFor(key)).toBeLessThanOrEqual(130)
     }
+  })
+})
+
+describe('nextTheme / parseTheme', () => {
+  it('cycles turntable -> jukebox -> cd and back round', () => {
+    expect(nextTheme('turntable')).toBe('jukebox')
+    expect(nextTheme('jukebox')).toBe('cd')
+    expect(nextTheme('cd')).toBe('turntable')
+  })
+  it('reads back a stored theme, and treats anything else as the turntable', () => {
+    expect(parseTheme('cd')).toBe('cd')
+    expect(parseTheme('jukebox')).toBe('jukebox')
+    expect(parseTheme(null)).toBe('turntable')
+    expect(parseTheme('cassette')).toBe('turntable')
+  })
+})
+
+describe('calendarWindow (CD track calendar)', () => {
+  it('shows the first 20 of a long disc, with OVER lit', () => {
+    expect(calendarWindow(3, 45)).toEqual({ first: 0, shown: 20, over: true })
+  })
+  it('moves to the block holding the playing track', () => {
+    expect(calendarWindow(20, 45)).toEqual({ first: 20, shown: 20, over: true })
+    expect(calendarWindow(44, 45)).toEqual({ first: 40, shown: 5, over: false })
+  })
+  it('shows the first block when nothing in the list is playing', () => {
+    expect(calendarWindow(-1, 12)).toEqual({ first: 0, shown: 12, over: false })
+    expect(calendarWindow(-1, 0)).toEqual({ first: 0, shown: 0, over: false })
   })
 })

@@ -11,6 +11,9 @@ import '@fontsource-variable/inter'
 import '@fontsource/monoton/400.css'
 import '@fontsource/courier-prime/400.css'
 import '@fontsource/courier-prime/700.css'
+// CD theme: dot-matrix lettering on the fluorescent display.
+import '@fontsource/doto/700.css'
+import '@fontsource/doto/900.css'
 import './styles.css'
 
 createRoot(document.getElementById('root')!).render(

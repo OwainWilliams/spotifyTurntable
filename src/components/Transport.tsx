@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { CrateIcon, ExpandIcon, NextIcon, PauseIcon, PlayIcon, PrevIcon, ShrinkIcon, VolumeIcon } from './icons'
+import { CrateIcon, CycleIcon, ExpandIcon, NextIcon, PauseIcon, PlayIcon, PrevIcon, ShrinkIcon, VolumeIcon } from './icons'
 
 interface Props {
   paused: boolean
@@ -12,6 +12,8 @@ interface Props {
   onVolume: (v: number) => void
   onCrate: () => void
   onFullscreen: () => void
+  /** Name of the theme the theme button switches to. */
+  nextTheme: string
   onTheme: () => void
 }
 
@@ -41,7 +43,7 @@ export function Transport(p: Props) {
 
       <div className="secondary">
         <button className="text-btn" onClick={p.onCrate} title="Crate (C)"><CrateIcon size={18} /> Crate</button>
-        <button className="text-btn" onClick={p.onTheme} title="Switch theme (T)">Jukebox</button>
+        <button className="text-btn" onClick={p.onTheme} title={`Switch to ${p.nextTheme} (T)`}><CycleIcon size={18} /> {p.nextTheme}</button>
         <button className="icon-btn small" onClick={p.onFullscreen} aria-label={p.isFullscreen ? 'Exit fullscreen' : 'Fullscreen'} title="Fullscreen (F)">
           {p.isFullscreen ? <ShrinkIcon size={18} /> : <ExpandIcon size={18} />}
         </button>

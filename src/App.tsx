@@ -9,7 +9,7 @@ import { useWakeLock } from './hooks/useWakeLock'
 import { useIdle } from './hooks/useIdle'
 import { useAlbumColour } from './hooks/useAlbumColour'
 import { useOnline } from './hooks/useOnline'
-import { useTheme } from './hooks/useTheme'
+import { THEME_NAMES, nextTheme, useTheme } from './hooks/useTheme'
 import { useAttract } from './hooks/useAttract'
 import { log } from './lib/log'
 import { Turntable } from './components/Turntable'
@@ -19,6 +19,7 @@ import { RepoLink } from './components/RepoLink'
 import { Crate } from './components/Crate'
 import { VuMeter } from './components/VuMeter'
 import { Jukebox, PER_PAGE } from './components/Jukebox'
+import { CdPlayer } from './components/CdPlayer'
 import { Setup } from './components/Setup'
 import { contextLabel } from './lib/contextLabel'
 
@@ -26,7 +27,7 @@ import { contextLabel } from './lib/contextLabel'
  * Three screens, one component (plus first-run setup for the Client ID):
  *   1. not logged in      -> "Connect Spotify"
  *   2. logged in, no deck -> "Power on" (needed: browsers require a click before audio)
- *   3. deck running       -> turntable or jukebox (the theme) + crate
+ *   3. deck running       -> turntable, jukebox or CD player (the theme) + crate
  */
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(isLoggedIn())
@@ -54,11 +55,12 @@ export default function App() {
   // once attract mode gives up, the screen may sleep.
   useWakeLock(powered && (!player.state.paused || attract === 'attract'))
 
-  // Only fetched while the jukebox is on screen; the turntable doesn't need it.
+  // Only fetched for the jukebox's strips and the CD's track calendar; the
+  // turntable doesn't need it.
   const strips = useContextTracks(
     player.state.contextUri,
     player.state.track?.uri ?? null,
-    powered && theme === 'jukebox',
+    powered && theme !== 'turntable',
     queueVersion,
   )
   const pages = Math.max(1, Math.ceil(strips.tracks.length / PER_PAGE))
@@ -219,6 +221,7 @@ export default function App() {
     player.seek(ms)?.catch(report)
   }
   const { track, upNext, paused, contextName } = player.state
+  const themeTo = THEME_NAMES[nextTheme(theme)]
   // What's playing, by name if Spotify will tell us, else by kind ("Playlist").
   // Not where the strips came from: the queue fallback is an implementation
   // detail, and it still shows the rest of the playlist.
@@ -300,6 +303,27 @@ export default function App() {
           onVolume={player.setVolume}
           onCrate={() => setCrateOpen(true)}
           onFullscreen={toggleFullscreen}
+          nextTheme={themeTo}
+          onTheme={toggleTheme}
+        />
+      ) : theme === 'cd' ? (
+        <CdPlayer
+          track={track}
+          paused={paused}
+          positionMs={position}
+          heading={heading}
+          tracks={strips.tracks}
+          volume={player.volume}
+          isFullscreen={isFullscreen}
+          nextTheme={themeTo}
+          onPlayTrack={playTrack}
+          onToggle={player.togglePlay}
+          onPrevious={player.previous}
+          onNext={player.next}
+          onSeek={seek}
+          onVolume={player.setVolume}
+          onCrate={() => setCrateOpen(true)}
+          onFullscreen={toggleFullscreen}
           onTheme={toggleTheme}
         />
       ) : (
@@ -325,6 +349,7 @@ export default function App() {
               onVolume={player.setVolume}
               onCrate={() => setCrateOpen(true)}
               onFullscreen={toggleFullscreen}
+              nextTheme={themeTo}
               onTheme={toggleTheme}
             />
           </aside>

@@ -3,7 +3,7 @@ import type { Track } from '../player/useSpotifyPlayer'
 import type { ContextTrack } from '../spotify/api'
 import type { AttractPhase } from '../hooks/useAttract'
 import { clock } from '../lib/clock'
-import { CrateIcon, ExpandIcon, NextIcon, PauseIcon, PlayIcon, PrevIcon, ShrinkIcon, VolumeIcon } from './icons'
+import { CrateIcon, CycleIcon, ExpandIcon, NextIcon, PauseIcon, PlayIcon, PrevIcon, ShrinkIcon, VolumeIcon } from './icons'
 
 /** Selection letters skip I and O, as real jukeboxes did: they read as 1 and 0. */
 const LETTERS = 'ABCDEFGHJKLMNPQRSTUVWXYZ'
@@ -55,6 +55,8 @@ interface Props {
   onVolume: (v: number) => void
   onCrate: () => void
   onFullscreen: () => void
+  /** Name of the theme the theme key switches to. */
+  nextTheme: string
   onTheme: () => void
 }
 
@@ -241,7 +243,7 @@ export function Jukebox(p: Props) {
                 />
               </label>
               <button className="pill-key" onClick={p.onCrate} title="Crate (C)"><CrateIcon /> Crate</button>
-              <button className="pill-key" onClick={p.onTheme} title="Switch theme (T)">Turntable</button>
+              <button className="pill-key" onClick={p.onTheme} title={`Switch to ${p.nextTheme} (T)`}><CycleIcon /> {p.nextTheme}</button>
               <button className="key" onClick={p.onFullscreen} aria-label={p.isFullscreen ? 'Exit fullscreen' : 'Fullscreen'} title="Fullscreen (F)">
                 {p.isFullscreen ? <ShrinkIcon /> : <ExpandIcon />}
               </button>

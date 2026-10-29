@@ -1,6 +1,6 @@
 # Spotify Turntable
 
-A fullscreen record player for a spare screen. Album art spins as the record label, the tonearm tracks progress, and your playlists and saved albums live in a slide-out crate. Press T for the second look: a title-strip jukebox whose neon takes its colour from the record. Audio plays in the browser via Spotify's Web Playback SDK (Premium required).
+A fullscreen record player for a spare screen. Album art spins as the record label, the tonearm tracks progress, and your playlists and saved albums live in a slide-out crate. Press T to switch to a title-strip jukebox whose neon takes its colour from the record, and again for a 90s hi-fi CD deck with the art printed on a spinning disc and a glowing fluorescent display. Audio plays in the browser via Spotify's Web Playback SDK (Premium required).
 
 **Try it: <https://thesecretstage.vip/spotifyTurntable/>** (you'll need your own free Spotify developer app; the page walks you through it).
 
@@ -33,7 +33,7 @@ Optionally put a Client ID in `.env` (see `.env.example`) to skip the setup scre
 | ← → | Previous / next track |
 | ↑ ↓ | Volume up / down |
 | C | Open the crate |
-| T | Switch between turntable and jukebox |
+| T | Next theme: turntable, jukebox, CD player |
 | Page Up / Down | Jukebox: previous / next page of strips |
 | F | Fullscreen |
 | L | Download the debug log |
@@ -65,7 +65,7 @@ src/
   spotify/api.ts         Typed Web API calls: library, playback, queue, jukebox strips
   player/                Web Playback SDK as a hook, position clock, jukebox strip list
   hooks/                 Fullscreen, wake lock, idle hide, album colour, theme, attract mode
-  components/            Turntable, Jukebox, VuMeter, NowPlaying, Transport, Crate, Setup, icons
+  components/            Turntable, Jukebox, CdPlayer, VuMeter, NowPlaying, Transport, Crate, Setup, icons
   lib/                   Logger, small pure helpers (+ their tests)
   App.tsx                Wires it together; keyboard shortcuts live here
 scripts/                 Windows launcher (npm run app), start-up shortcut, icon generator

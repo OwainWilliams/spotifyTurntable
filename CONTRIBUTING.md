@@ -7,7 +7,7 @@ Thanks for taking a look. Bug reports, ideas and pull requests are all welcome, 
 - **Report a bug** or **suggest an idea**: open an issue. For bugs, the debug log helps a lot (see [Reporting a bug](#reporting-a-bug)).
 - **Fix something small**: typos, styling glitches and clear bugs can go straight to a pull request.
 - **Build something bigger**: please open an issue first so we can agree on the approach before you put time in. Open ideas include:
-  - a portrait layout for the jukebox (it letterboxes at 16:9 today)
+  - portrait layouts for the jukebox and CD player (they letterbox today)
   - jukebox lighting that pulses with the (simulated) beat, reusing the VU meter's `--level` trick
 
 ## Getting set up
@@ -44,7 +44,7 @@ Then:
 
 - **Keep it focused.** One change per pull request is easier to review and to revert.
 - **Say what and why** in the description, and how you tested it.
-- **Include screenshots for visual changes**, of both themes (press T to switch) if the change touches anything they share: backdrop, banners, crate or the bottom link. Check a small screen (around 1366×768) as well as 1080p.
+- **Include screenshots for visual changes**, of each theme (press T to cycle) if the change touches anything they share: backdrop, banners, crate or the bottom link. Check a small screen (around 1366×768) as well as 1080p.
 - **Add a test** if you change one of the pure helpers in `src/lib/` or the storage and callback logic in `src/spotify/auth.ts`. Tests are in `src/lib/helpers.test.ts` and `src/spotify/auth.test.ts` (Vitest).
 
 ## How the project is put together

@@ -1,6 +1,6 @@
 # Spotify Turntable
 
-Personal fullscreen visualiser for a dedicated PC screen: album art spins as the record label, tonearm tracks progress, playlists and saved albums in a slide-out crate. A second theme (T to switch) draws the same player as a title-strip jukebox. Audio plays in-browser via Spotify Web Playback SDK (Premium account available).
+Personal fullscreen visualiser for a dedicated PC screen: album art spins as the record label, tonearm tracks progress, playlists and saved albums in a slide-out crate. Two more themes (T cycles) draw the same player as a title-strip jukebox and a hi-fi CD deck. Audio plays in-browser via Spotify Web Playback SDK (Premium account available).
 
 Owner is a senior .NET developer learning React/TS. When explaining changes, prefer the .NET analogy where one exists, and explain *why* rather than just handing over code.
 
@@ -25,9 +25,9 @@ src/spotify/auth.ts            PKCE login, coalesced token refresh, AuthRequired
 src/spotify/api.ts             typed Web API calls with retry policy (401 refresh, 429 Retry-After, 5xx backoff)
 src/player/useSpotifyPlayer.ts SDK lifecycle as a hook; returns status, deviceId, state (incl. contextUri), controls
 src/player/usePosition.ts      rAF clock extrapolating position between SDK events
-src/player/useContextTracks.ts jukebox strip list: whole album/playlist, else the queue
+src/player/useContextTracks.ts jukebox strips / CD track calendar: whole album/playlist, else the queue
 src/hooks/                     useFullscreen, useWakeLock, useIdle, useOnline, useAlbumColour (background + neon), useTheme, useAttract
-src/components/                Setup (first-run Client ID), RepoLink (GitHub credit line), Turntable, VuMeter, NowPlaying (track info + progress), Transport (buttons/volume), Jukebox (whole jukebox theme), Crate, ErrorBoundary, icons (inline SVG)
+src/components/                Setup (first-run Client ID), RepoLink (GitHub credit line), Turntable, VuMeter, NowPlaying (track info + progress), Transport (buttons/volume), Jukebox (whole jukebox theme), CdPlayer (whole CD theme), Crate, ErrorBoundary, icons (inline SVG)
 src/assets/walnut.svg          generated wood grain (SVG noise filters) for the plinth
 src/styles.css                 all styling; deck internals in cqw
 src/App.tsx                    wiring, keyboard shortcuts, single report() for errors
@@ -48,7 +48,8 @@ docs/                          README screenshots
 - A network failure during token refresh must NOT log the user out; only an `invalid_grant` does.
 - The VU meter is SIMULATED, by choice. SDK audio is DRM-protected (Web Audio can't read it) and `/audio-analysis` + `/audio-features` return 403 for apps created after Nov 2024. Each track gets a pseudo-tempo hashed from its name; the rAF loop writes `--level` straight to the DOM rather than React state. Mic/loopback input was offered as the real-beat alternative and declined for now.
 - Volume is persisted in localStorage (`turntable.volume`) and applied via the SDK, not the OS.
-- Two themes, turntable and jukebox, persisted in localStorage (`turntable.theme`), toggled with T or the button beside Crate. The jukebox is mockup B from the design canvas (https://claude.ai/artifact/KC1qcNnTkauP37qQ4uJBTg). Backdrop, banners and crate are shared; only the machine swaps.
+- Three themes, turntable, jukebox and CD, persisted in localStorage (`turntable.theme`). T or the theme button cycles them in that order (`nextTheme` in useTheme); the button shows a cycle icon and names the theme it goes to. Chosen over a three-way selector to keep each machine's controls small. The jukebox is mockup B from the design canvas (https://claude.ai/artifact/KC1qcNnTkauP37qQ4uJBTg). Backdrop, banners and crate are shared; only the machine swaps.
+- CD theme: a 90s silver deck, 100:46, drawn in cqw. The album art is the disc's printed face (masked to the printable ring, magnetic clamp on the hub); only `.cd-disc` rotates, and `.cd-window` clips it (see the `.platter` gotcha). The VFD (teal `--vfd`, Doto dot-matrix font) shows track number, elapsed or remaining time (TIME key, persisted as `turntable.cdTime`), the title as a ticker when it's longer than ~30 chars, a segmented progress bar, a 20-number track calendar (click to play; OVER when there are more; `calendarWindow`) and the shared VuMeter restyled horizontally. Track numbers and the calendar come from `useContextTracks`, so they're blank for contexts it can't list. The crate opens from the fascia's Crate key.
 - Jukebox strips: 18 per page, codes A1-C6 on page 1, D1-F6 on page 2, skipping I and O as real jukeboxes did. 24 letters give 8 pages, so `getContextTracks` caps at 144. Clicking a strip plays the context with `offset: { uri }`, or, with the Queue key lit (persisted as `turntable.queueMode`), adds it to Spotify's queue. Queue badges are the jukebox's own record of what it added: the API can't list or remove queue entries reliably. The Clear key empties the queue by replaying the current track at its current position (`PUT /me/player/play` drops the user queue; there's no clear endpoint), re-pausing if it was paused.
 - Jukebox neon (`--neon`) is the album art's most vivid pixel at fixed saturation/lightness (`useAlbumColour`), falling back to pink for grey covers. It's a registered `@property <color>` so it fades between records.
 - Jukebox attract mode (`useAttract`): paused + no input for 2 min starts a chase light and auto-paging, and holds the wake lock; 30 min later it dims to "asleep" and releases the lock so the screen can sleep.
@@ -76,7 +77,7 @@ docs/                          README screenshots
 - Groove rings finer than ~2px alias into moire; keep `repeating-radial-gradient` pitch >= 0.4cqw with soft edges.
 - `.stage` is `overflow: clip`, not `hidden`, and the crate focuses its search with `preventScroll`: hidden containers can still be scrolled by focus(), which slid the whole display sideways when the crate opened.
 - The App keyboard listener subscribes once and reads `player` through a ref. Re-subscribing per render dropped the first key after idle (React swapped the listener mid-dispatch).
-- Fonts are bundled (`@fontsource`, pinned) so kiosk mode renders correctly offline: Instrument Serif for titles, Inter for UI, Monoton (neon marquee) and Courier Prime (title strips) for the jukebox.
+- Fonts are bundled (`@fontsource`, pinned) so kiosk mode renders correctly offline: Instrument Serif for titles, Inter for UI, Monoton (neon marquee) and Courier Prime (title strips) for the jukebox, Doto (VFD) for the CD player.
 - `RepoLink` (bottom-centre "contributions welcome on GitHub" line) is rendered once in App for both themes, fades when idle, and opens in a new tab: navigating the player window away would unload the page and kill the Spotify device. It's a footer row in the flow (`.stage` is a flex column), never absolutely positioned: floating, it covered the controls on phones. Both machines subtract `--credit-h` (its row height) when sizing to the viewport height, so desktop screens fit without scrolling.
 - On short screens (phones) the turntable's `.scene` scrolls vertically, with `align-content: safe center` so it centres when it fits and starts at the top when it doesn't (plain `center` cut the top off, unreachably).
 - The Log button was removed from the UI; L still downloads the log, and the crash screen still offers it.
@@ -87,7 +88,7 @@ docs/                          README screenshots
 
 ## Not yet built
 
-- Jukebox portrait layout (it letterboxes at 16:9) and beat-linked jukebox lighting (VuMeter's `--level` trick would do it).
+- Jukebox and CD portrait layouts (they letterbox; the CD deck is a thin strip on a phone) and beat-linked jukebox lighting (VuMeter's `--level` trick would do it).
 - Non-Premium fallback (poll `/me/player/currently-playing`) is out of scope.
 
 ## Commands
