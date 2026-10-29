@@ -8,6 +8,8 @@ A fullscreen record player for a spare screen. Album art spins as the record lab
 
 ![The jukebox theme: neon marquee, the playing single under a glass dome, and a wall of A1-C6 title strips](docs/jukebox.jpg)
 
+![The CD theme: a silver hi-fi deck with the album art printed on the spinning disc, and a teal dot-matrix display showing track, time, title, track calendar and level meter](docs/cd.jpg)
+
 ## Setup
 
 Everyone uses their own Spotify app (free to create). Spotify only lets an app in Development Mode be used by its owner and a few allowlisted people, so one shared app can't serve everybody. Premium is required.
