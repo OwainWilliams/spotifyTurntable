@@ -269,6 +269,12 @@ button:disabled { cursor: default; }
   display: grid;
   place-items: center;
   z-index: 1;
+  /* The spinning .disc is a square box: rotated, its bounds reach ~41% past
+     the circle, which counts as scrollable overflow in the .scene scroller.
+     Unclipped, the scrollbar and safe-center flipped on and off four times a
+     turn and the whole scene jittered. The record is inside the platter, so
+     clipping here hides nothing. */
+  overflow: clip;
 }
 .platter::before {
   content: '';
