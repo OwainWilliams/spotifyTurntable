@@ -229,6 +229,11 @@ export function Cassette(p: Props) {
                           <circle cx={HUB_R} cy={HUB_Y} r="8.2" fill="#000" />
                           <rect x="39" y="22.5" width="22" height="13" rx="1.4" fill="#000" />
                         </mask>
+                        {/* The shell's insides only show through the label's holes; a full pack is
+                            wider than the label is tall, so clip it rather than let it poke out below. */}
+                        <clipPath id={`${mask}-in`}>
+                          <rect x="5" y="3.5" width="90" height="40" />
+                        </clipPath>
                         <radialGradient id={`${mask}-pack`}>
                           <stop offset="0.3" stopColor="#2a1810" />
                           <stop offset="0.92" stopColor="#4a2c1b" />
@@ -238,22 +243,24 @@ export function Cassette(p: Props) {
 
                       <rect className="shell" width="100" height="63.5" rx="3" />
                       {/* Inside the shell, seen through the label's holes. */}
-                      <rect x="14" y="16" width="72" height="27" fill="#0d0b0a" />
-                      {[0, 1].map((i) => (
-                        <circle
-                          key={i} ref={(el) => { packs.current[i] = el }}
-                          cx={i ? HUB_R : HUB_L} cy={HUB_Y} r={HUB} fill={`url(#${mask}-pack)`}
-                        />
-                      ))}
-                      {[0, 1].map((i) => (
-                        <g key={i} ref={(el) => { hubs.current[i] = el }} className="hub">
-                          <circle r="5.4" fill="#e8e3d8" />
-                          <circle r="3.4" fill="#16130f" />
-                          {[0, 60, 120, 180, 240, 300].map((a) => (
-                            <rect key={a} x="-0.55" y="-3.6" width="1.1" height="1.5" fill="#e8e3d8" transform={`rotate(${a})`} />
-                          ))}
-                        </g>
-                      ))}
+                      <g clipPath={`url(#${mask}-in)`}>
+                        <rect x="14" y="16" width="72" height="27" fill="#0d0b0a" />
+                        {[0, 1].map((i) => (
+                          <circle
+                            key={i} ref={(el) => { packs.current[i] = el }}
+                            cx={i ? HUB_R : HUB_L} cy={HUB_Y} r={HUB} fill={`url(#${mask}-pack)`}
+                          />
+                        ))}
+                        {[0, 1].map((i) => (
+                          <g key={i} ref={(el) => { hubs.current[i] = el }} className="hub">
+                            <circle r="5.4" fill="#e8e3d8" />
+                            <circle r="3.4" fill="#16130f" />
+                            {[0, 60, 120, 180, 240, 300].map((a) => (
+                              <rect key={a} x="-0.55" y="-3.6" width="1.1" height="1.5" fill="#e8e3d8" transform={`rotate(${a})`} />
+                            ))}
+                          </g>
+                        ))}
+                      </g>
 
                       <g mask={`url(#${mask})`}>
                         <rect x="5" y="3.5" width="90" height="40" fill="#efe7d3" />
