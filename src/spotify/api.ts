@@ -189,12 +189,20 @@ export const playContext = (deviceId: string, contextUri: string | null, trackUr
 export const addToQueue = (deviceId: string, trackUri: string) =>
   request<void>(`/me/player/queue?uri=${enc(trackUri)}&device_id=${enc(deviceId)}`, { method: 'POST' })
 
+export const setShuffle = (deviceId: string, on: boolean) =>
+  request<void>(`/me/player/shuffle?state=${on}&device_id=${enc(deviceId)}`, { method: 'PUT' })
+
+export const setRepeat = (deviceId: string, mode: 'off' | 'context' | 'track') =>
+  request<void>(`/me/player/repeat?state=${mode}&device_id=${enc(deviceId)}`, { method: 'PUT' })
+
 // ---- context contents (jukebox title strips) -------------------------------
 
 export interface ContextTrack {
   uri: string
   name: string
   artists: string
+  /** Lets the cassette lay the tracks end to end as one tape. */
+  durationMs: number
 }
 
 interface ApiTrack {
@@ -202,12 +210,14 @@ interface ApiTrack {
   uri: string
   name: string
   artists: { name: string }[] | null
+  duration_ms?: number
 }
 
 const toContextTrack = (t: ApiTrack): ContextTrack => ({
   uri: t.uri,
   name: t.name,
   artists: t.artists?.map((a) => a.name).join(', ') ?? '',
+  durationMs: t.duration_ms ?? 0,
 })
 
 /** Episodes and local files can't be offered as strips; nulls are removed tracks. */

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AuthRequiredError, NetworkError, getClientId, handleCallback, isCallback, isLoggedIn, login, logout } from './spotify/auth'
-import { addToQueue, playContext, transferPlayback } from './spotify/api'
+import { addToQueue, playContext, setRepeat, setShuffle, transferPlayback } from './spotify/api'
 import { useSpotifyPlayer } from './player/useSpotifyPlayer'
 import { usePosition } from './player/usePosition'
 import { useContextTracks } from './player/useContextTracks'
@@ -20,6 +20,8 @@ import { Crate } from './components/Crate'
 import { VuMeter } from './components/VuMeter'
 import { Jukebox, PER_PAGE } from './components/Jukebox'
 import { CdPlayer } from './components/CdPlayer'
+import { Cassette } from './components/Cassette'
+import { Winamp } from './components/Winamp'
 import { Setup } from './components/Setup'
 import { contextLabel } from './lib/contextLabel'
 
@@ -27,7 +29,7 @@ import { contextLabel } from './lib/contextLabel'
  * Three screens, one component (plus first-run setup for the Client ID):
  *   1. not logged in      -> "Connect Spotify"
  *   2. logged in, no deck -> "Power on" (needed: browsers require a click before audio)
- *   3. deck running       -> turntable, jukebox or CD player (the theme) + crate
+ *   3. deck running       -> turntable, jukebox, CD, cassette or Winamp-style player (the theme) + crate
  */
 export default function App() {
   const [loggedIn, setLoggedIn] = useState(isLoggedIn())
@@ -55,8 +57,8 @@ export default function App() {
   // once attract mode gives up, the screen may sleep.
   useWakeLock(powered && (!player.state.paused || attract === 'attract'))
 
-  // Only fetched for the jukebox's strips and the CD's track calendar; the
-  // turntable doesn't need it.
+  // Only fetched for the jukebox's strips, the CD's track calendar, the
+  // cassette's tape and the Winamp playlist; the turntable doesn't need it.
   const strips = useContextTracks(
     player.state.contextUri,
     player.state.track?.uri ?? null,
@@ -113,7 +115,8 @@ export default function App() {
     if (online) setNotice((n) => (n?.startsWith('Lost contact') ? null : n))
   }, [online])
 
-  // Keyboard: space play/pause, left/right skip, up/down volume, F fullscreen, C crate,
+  // Keyboard: space play/pause, left/right skip (the cassette winds instead,
+  // and listens for itself, since it needs the key's release), up/down volume, F fullscreen, C crate,
   // T theme, Page Up/Down jukebox page, L download log, Esc close.
   //
   // Subscribed once, reading the latest values through a ref. Re-subscribing
@@ -122,17 +125,17 @@ export default function App() {
   // listener mid-dispatch, and the DOM skips both the removed old listener and
   // the newly added one, so the first key after idle did nothing.
   // .NET analogy: subscribe in the constructor, read current state from a field.
-  const keyDeps = useRef({ player, toggleFullscreen, toggleTheme, pages })
+  const keyDeps = useRef({ player, toggleFullscreen, toggleTheme, pages, theme })
   // Updated after each render (not during it, which React may discard/replay).
-  useLayoutEffect(() => { keyDeps.current = { player, toggleFullscreen, toggleTheme, pages } })
+  useLayoutEffect(() => { keyDeps.current = { player, toggleFullscreen, toggleTheme, pages, theme } })
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement) return
-      const { player, toggleFullscreen, toggleTheme, pages } = keyDeps.current
+      const { player, toggleFullscreen, toggleTheme, pages, theme } = keyDeps.current
       switch (e.key) {
         case ' ': e.preventDefault(); player.togglePlay(); break
-        case 'ArrowRight': player.next(); break
-        case 'ArrowLeft': player.previous(); break
+        case 'ArrowRight': if (theme !== 'cassette') player.next(); break
+        case 'ArrowLeft': if (theme !== 'cassette') player.previous(); break
         case 'ArrowUp': e.preventDefault(); player.setVolume(player.volume + 0.05); break
         case 'ArrowDown': e.preventDefault(); player.setVolume(player.volume - 0.05); break
         case 'f': case 'F': toggleFullscreen(); break
@@ -205,6 +208,52 @@ export default function App() {
       report(e)
       return false
     }
+  }
+
+  /**
+   * Where the cassette's FF or REW let go. Still in the same song: seek. A
+   * song or more along the tape: start that one there. Either way, carry on
+   * playing only if it was playing before winding.
+   */
+  const cue = async (uri: string, positionMs: number, play: boolean) => {
+    if (!player.deviceId) return
+    log.info('app', 'cue', { uri, positionMs, play })
+    try {
+      if (uri === player.state.track?.uri) {
+        await player.seek(positionMs)
+        if (play) await player.resume()
+      } else {
+        await playContext(player.deviceId, player.state.contextUri, uri, positionMs)
+        if (!play) await player.pause()
+      }
+    } catch (e) {
+      report(e)
+    }
+  }
+
+  /** Winamp's Stop: pause, and back to the start of the track. */
+  const stop = async () => {
+    log.info('app', 'stop')
+    try {
+      await player.pause()
+      await player.seek(0)
+    } catch (e) {
+      report(e)
+    }
+  }
+
+  const toggleShuffle = () => {
+    if (!player.deviceId) return
+    log.info('app', 'shuffle', { on: !player.state.shuffle })
+    setShuffle(player.deviceId, !player.state.shuffle).catch(report)
+  }
+
+  /** One key, two states, as on Winamp: any repeat (context or track) turns off. */
+  const toggleRepeat = () => {
+    if (!player.deviceId) return
+    const mode = player.state.repeat === 'off' ? 'context' : 'off'
+    log.info('app', 'repeat', { mode })
+    setRepeat(player.deviceId, mode).catch(report)
   }
 
   const connect = () => login().catch(report)
@@ -322,6 +371,50 @@ export default function App() {
           onNext={player.next}
           onSeek={seek}
           onVolume={player.setVolume}
+          onCrate={() => setCrateOpen(true)}
+          onFullscreen={toggleFullscreen}
+          onTheme={toggleTheme}
+        />
+      ) : theme === 'cassette' ? (
+        <Cassette
+          track={track}
+          paused={paused}
+          positionMs={position}
+          heading={heading}
+          tracks={strips.tracks}
+          volume={player.volume}
+          isFullscreen={isFullscreen}
+          nextTheme={themeTo}
+          onToggle={player.togglePlay}
+          onPause={player.pause}
+          onCue={cue}
+          onVolume={player.setVolume}
+          onCrate={() => setCrateOpen(true)}
+          onFullscreen={toggleFullscreen}
+          onTheme={toggleTheme}
+        />
+      ) : theme === 'winamp' ? (
+        <Winamp
+          track={track}
+          paused={paused}
+          positionMs={position}
+          heading={heading}
+          tracks={strips.tracks}
+          volume={player.volume}
+          shuffle={player.state.shuffle}
+          repeat={player.state.repeat}
+          isFullscreen={isFullscreen}
+          nextTheme={themeTo}
+          onPlayTrack={playTrack}
+          onToggle={player.togglePlay}
+          onResume={player.resume}
+          onStop={stop}
+          onPrevious={player.previous}
+          onNext={player.next}
+          onSeek={seek}
+          onVolume={player.setVolume}
+          onShuffle={toggleShuffle}
+          onRepeat={toggleRepeat}
           onCrate={() => setCrateOpen(true)}
           onFullscreen={toggleFullscreen}
           onTheme={toggleTheme}

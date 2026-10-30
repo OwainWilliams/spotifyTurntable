@@ -1,6 +1,6 @@
 # Spotify Turntable
 
-A fullscreen record player for a spare screen. Album art spins as the record label, the tonearm tracks progress, and your playlists and saved albums live in a slide-out crate. Press T to switch to a title-strip jukebox whose neon takes its colour from the record, and again for a 90s hi-fi CD deck with the art printed on a spinning disc and a glowing fluorescent display. Audio plays in the browser via Spotify's Web Playback SDK (Premium required).
+A fullscreen record player for a spare screen. Album art spins as the record label, the tonearm tracks progress, and your playlists and saved albums live in a slide-out crate. Press T to switch to a title-strip jukebox whose neon takes its colour from the record, again for a 90s hi-fi CD deck with the art printed on a spinning disc and a glowing fluorescent display, and once more for an 80s cassette deck: no skip buttons, just hold fast forward and see where you land. Press it a fifth time for a late-90s desktop MP3 player: green LCD, spectrum analyser, scrolling title and a playlist editor. Audio plays in the browser via Spotify's Web Playback SDK (Premium required).
 
 **Try it: <https://thesecretstage.vip/spotifyTurntable/>** (you'll need your own free Spotify developer app; the page walks you through it).
 
@@ -9,6 +9,10 @@ A fullscreen record player for a spare screen. Album art spins as the record lab
 ![The jukebox theme: neon marquee, the playing single under a glass dome, and a wall of A1-C6 title strips](docs/jukebox.jpg)
 
 ![The CD theme: a silver hi-fi deck with the album art printed on the spinning disc, and a teal dot-matrix display showing track, time, title, track calendar and level meter](docs/cd.jpg)
+
+![The cassette theme: a black tape deck with the album art as the cassette label, piano keys with no skip buttons, a tape counter and a level meter](docs/cassette.jpg)
+
+![The Winamp theme: a green LCD main window with spectrum analyser and scrolling title, a playlist editor, and the album art in its own window](docs/winamp.jpg)
 
 ## Setup
 
@@ -32,10 +36,10 @@ Optionally put a Client ID in `.env` (see `.env.example`) to skip the setup scre
 | Key | Action |
 |---|---|
 | Space | Play / pause |
-| ← → | Previous / next track |
+| ← → | Previous / next track (cassette: hold to rewind / fast forward) |
 | ↑ ↓ | Volume up / down |
 | C | Open the crate |
-| T | Next theme: turntable, jukebox, CD player |
+| T | Next theme: turntable, jukebox, CD player, cassette deck, Winamp |
 | Page Up / Down | Jukebox: previous / next page of strips |
 | F | Fullscreen |
 | L | Download the debug log |
@@ -67,7 +71,7 @@ src/
   spotify/api.ts         Typed Web API calls: library, playback, queue, jukebox strips
   player/                Web Playback SDK as a hook, position clock, jukebox strip list
   hooks/                 Fullscreen, wake lock, idle hide, album colour, theme, attract mode
-  components/            Turntable, Jukebox, CdPlayer, VuMeter, NowPlaying, Transport, Crate, Setup, icons
+  components/            Turntable, Jukebox, CdPlayer, Cassette, Winamp, VuMeter, NowPlaying, Transport, Crate, Setup, icons
   lib/                   Logger, small pure helpers (+ their tests)
   App.tsx                Wires it together; keyboard shortcuts live here
 scripts/                 Windows launcher (npm run app), start-up shortcut, icon generator

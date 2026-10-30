@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 
 /** In the order T (and the theme button) cycles through them. */
-const THEMES = ['turntable', 'jukebox', 'cd'] as const
+const THEMES = ['turntable', 'jukebox', 'cd', 'cassette', 'winamp'] as const
 export type Theme = (typeof THEMES)[number]
 
 /** What the theme button calls each one. It names the theme it goes to. */
-export const THEME_NAMES: Record<Theme, string> = { turntable: 'Turntable', jukebox: 'Jukebox', cd: 'CD' }
+export const THEME_NAMES: Record<Theme, string> = {
+  turntable: 'Turntable', jukebox: 'Jukebox', cd: 'CD', cassette: 'Cassette', winamp: 'Winamp',
+}
 
 const THEME_KEY = 'turntable.theme'
 
